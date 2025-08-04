@@ -1,16 +1,70 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Task, ScheduledTasks, ScheduledTask } from './types/task';
-import { sampleTasks } from './data/sampleTasks';
+import { TodoistApi, TodoistApiError } from './services/todoist-api';
+import { AuthService } from './services/auth';
+import { convertTodoistTaskToTask } from './utils/taskConverter';
 import TaskList from './components/TaskList/TaskList';
 import Calendar from './components/Calendar/Calendar';
 import TaskModal from './components/TaskModal/TaskModal';
 
 function App() {
-  const [tasks, setTasks] = useState<Task[]>(sampleTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTasks>({});
   const [modalTask, setModalTask] = useState<ScheduledTask | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const draggedTaskRef = useRef<Task | null>(null);
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        const token = AuthService.getToken();
+        if (!token) {
+          setIsAuthenticated(false);
+          setLoading(false);
+          return;
+        }
+
+        setIsAuthenticated(true);
+        
+        const todoistTasks = await TodoistApi.getTasks();
+        const convertedTasks = todoistTasks
+          .filter(task => !task.due) // Only show unscheduled tasks
+          .map(convertTodoistTaskToTask);
+        
+        setTasks(convertedTasks);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to load tasks:', err);
+        if (err instanceof TodoistApiError) {
+          setError(`Todoist API Error: ${err.message}`);
+          // If it's an auth error, clear the token
+          if (err.status === 401 || err.status === 403) {
+            AuthService.removeToken();
+            setIsAuthenticated(false);
+          }
+        } else {
+          setError('Failed to load tasks. Please check your connection.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  const handleLogin = (token: string) => {
+    AuthService.setToken(token);
+    setIsAuthenticated(true);
+    setError(null);
+    setLoading(true);
+    
+    // Reload the app
+    window.location.reload();
+  };
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, task: Task) => {
     draggedTaskRef.current = task;
@@ -136,6 +190,80 @@ function App() {
   const handleEditTask = () => {
     alert('Edit functionality would open a task edit form here! 📝');
   };
+
+  if (loading) {
+    return (
+      <div className="container">
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <div>Loading tasks...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container">
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h2>Todoist Integration</h2>
+          <p>Please enter your Todoist API token to get started.</p>
+          <p>
+            You can find your API token in your{' '}
+            <a href="https://todoist.com/prefs/integrations" target="_blank" rel="noopener noreferrer">
+              Todoist settings
+            </a>
+          </p>
+          <input
+            type="password"
+            placeholder="Enter your Todoist API token"
+            style={{ padding: '0.5rem', margin: '1rem', width: '300px' }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const token = (e.target as HTMLInputElement).value.trim();
+                if (token) {
+                  handleLogin(token);
+                }
+              }
+            }}
+          />
+          <br />
+          <button
+            onClick={() => {
+              const input = document.querySelector('input[type="password"]') as HTMLInputElement;
+              const token = input?.value.trim();
+              if (token) {
+                handleLogin(token);
+              }
+            }}
+            style={{ padding: '0.5rem 1rem', marginTop: '0.5rem' }}
+          >
+            Connect to Todoist
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container">
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
+          <h3>Error</h3>
+          <p>{error}</p>
+          <button
+            onClick={() => {
+              AuthService.removeToken();
+              setIsAuthenticated(false);
+              setError(null);
+            }}
+            style={{ padding: '0.5rem 1rem', margin: '1rem' }}
+          >
+            Reset Authentication
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container">

@@ -105,3 +105,13 @@ interface TodoistTask {
 - Screen reader compatibility
 - High contrast mode support
 - Focus management during interactions
+
+## Development Workflow Instructions
+
+### Working with the Project Todo List
+- **Primary Todo List**: All project tasks are tracked in `TODO.md` in the root directory
+- **Task Management**: Always read TODO.md first to understand current priorities and pending work
+- **Progress Tracking**: Mark items as completed by adding `[x]` or similar completion markers as you finish them
+- **Task Updates**: Update TODO.md in real-time as you work through tasks - don't batch updates
+- **New Tasks**: Add newly discovered tasks to TODO.md as they arise during development
+- **Context**: Always reference the todo list when planning work to ensure alignment with project goals

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScheduledTasks, ScheduledTask as ScheduledTaskType } from '../../types/task';
-import { timeSlots, daysOfWeek } from '../../data/sampleTasks';
+import { timeSlots, daysOfWeek } from '../../constants/calendar';
 import ScheduledTask from './ScheduledTask';
 
 interface CalendarProps {
