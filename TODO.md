@@ -14,6 +14,23 @@ This document outlines the tasks needed to transform the proof of concept into a
 - [x] Replace mock task data with real Todoist API calls
 - [x] Implement proper error handling for API failures
 
+### 📅 Calendar Features
+- [ ] **Replace generic weekdays with actual dates (Mon Jan 6, Tue Jan 7, etc.)**
+- [ ] **Add current week/month display in calendar header**
+- [ ] **Implement date-based calendar logic (current week, proper date calculations)**
+- [ ] Add calendar navigation (arrows for week/month)
+- [ ] Implement multiple calendar view modes (week/month)
+- [ ] Add task editing functionality (replace placeholder alert)
+- [ ] **Update calendar data structure to use actual dates instead of generic day names**
+
+### 🎯 **CRITICAL - Task Date Updates**
+- [ ] Implement API call to update task due dates when dropped on calendar
+- [ ] Add date/time utilities to convert calendar slots to proper due dates
+- [ ] Handle scheduled task persistence across app reloads
+- [ ] Add error handling for failed task updates
+- [ ] Implement optimistic updates with rollback on API failure
+- [ ] Load existing scheduled tasks from Todoist on app initialization
+
 ## Medium Priority - Enhanced Functionality
 
 ### 💻 Code Architecture
@@ -21,11 +38,6 @@ This document outlines the tasks needed to transform the proof of concept into a
 - [x] Refactor monolithic HTML/JS into modular components
 - [ ] Add state management (Context/Zustand) for task data
 - [ ] Implement optimistic updates for better UX
-
-### 📅 Calendar Features
-- [ ] Add calendar navigation (arrows for week/month)
-- [ ] Implement multiple calendar view modes (week/month)
-- [ ] Add task editing functionality (replace placeholder alert)
 
 ## Low Priority - Polish & Robustness
 
