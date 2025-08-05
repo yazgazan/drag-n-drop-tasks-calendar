@@ -259,12 +259,26 @@ function App() {
       const dateSlotKey = `${date}-${time}`;
       
       if (scheduledTasks[dateSlotKey]) {
-        // Show feedback that slot is occupied
-        dropTarget.style.background = '#ffebee';
-        setTimeout(() => {
-          dropTarget.style.background = '';
-        }, 500);
-        return;
+        // Check if the occupying task is the same as the one being dragged
+        const occupyingTask = scheduledTasks[dateSlotKey];
+        const isDraggingSameTask = draggedScheduledTask && occupyingTask.id === draggedScheduledTask.id;
+        
+        if (!isDraggingSameTask) {
+          // Restore scheduled task to its original slot if it was moved
+          if (draggedScheduledTask) {
+            const oldSlotKey = draggedScheduledTask.date ? 
+              `${draggedScheduledTask.date}-${draggedScheduledTask.time}` : 
+              `${draggedScheduledTask.day}-${draggedScheduledTask.time}`;
+            setScheduledTasks(prev => ({ ...prev, [oldSlotKey]: draggedScheduledTask }));
+          }
+          
+          // Show feedback that slot is occupied
+          dropTarget.style.background = '#ffebee';
+          setTimeout(() => {
+            dropTarget.style.background = '';
+          }, 500);
+          return;
+        }
       }
 
       try {
