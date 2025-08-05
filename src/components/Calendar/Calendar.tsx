@@ -2,7 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { ScheduledTasks, ScheduledTask as ScheduledTaskType } from '../../types/task';
 import { timeSlots } from '../../constants/calendar';
 import ScheduledTask from './ScheduledTask';
-import { getCurrentWeekDates, getWeekRangeString, formatCalendarHeaderDate, getPreviousWeek, getNextWeek, CalendarDate } from '../../utils/dateUtils';
+import { 
+  getCurrentWeekDates, 
+  getWeekRangeString, 
+  formatCalendarHeaderDate, 
+  getPreviousWeek, 
+  getNextWeek, 
+  getCurrentMonthDates,
+  getMonthRangeString,
+  getPreviousMonth,
+  getNextMonth,
+  CalendarDate 
+} from '../../utils/dateUtils';
+
+export type CalendarViewMode = 'week' | 'month';
 
 interface CalendarProps {
   scheduledTasks: ScheduledTasks;
@@ -13,6 +26,8 @@ interface CalendarProps {
   onTaskClick: (task: ScheduledTaskType) => void;
   onScheduledTaskDragStart?: (e: React.DragEvent<HTMLDivElement>, task: ScheduledTaskType) => void;
   onScheduledTaskDragEnd?: (e: React.DragEvent<HTMLDivElement>) => void;
+  viewMode?: CalendarViewMode;
+  onViewModeChange?: (mode: CalendarViewMode) => void;
 }
 
 const Calendar: React.FC<CalendarProps> = ({
@@ -23,13 +38,19 @@ const Calendar: React.FC<CalendarProps> = ({
   onDrop,
   onTaskClick,
   onScheduledTaskDragStart,
-  onScheduledTaskDragEnd
+  onScheduledTaskDragEnd,
+  viewMode = 'week',
+  onViewModeChange
 }) => {
-  const [currentWeekDates, setCurrentWeekDates] = useState<CalendarDate[]>([]);
+  const [currentDates, setCurrentDates] = useState<CalendarDate[]>([]);
 
   useEffect(() => {
-    setCurrentWeekDates(getCurrentWeekDates());
-  }, []);
+    if (viewMode === 'week') {
+      setCurrentDates(getCurrentWeekDates());
+    } else {
+      setCurrentDates(getCurrentMonthDates());
+    }
+  }, [viewMode]);
 
   const getScheduledTask = (date: CalendarDate, time: string): ScheduledTaskType | undefined => {
     // Support both new date-based keys and legacy day-based keys
@@ -38,83 +59,182 @@ const Calendar: React.FC<CalendarProps> = ({
     return scheduledTasks[dateKey] || scheduledTasks[legacyKey];
   };
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    if (currentWeekDates.length === 0) return;
+  const navigate = (direction: 'prev' | 'next') => {
+    if (currentDates.length === 0) return;
     
-    const currentStart = currentWeekDates[0].date;
-    const newWeekDates = direction === 'prev' 
-      ? getPreviousWeek(currentStart)
-      : getNextWeek(currentStart);
+    const currentStart = currentDates[0].date;
+    let newDates: CalendarDate[];
     
-    setCurrentWeekDates(newWeekDates);
+    if (viewMode === 'week') {
+      newDates = direction === 'prev' 
+        ? getPreviousWeek(currentStart)
+        : getNextWeek(currentStart);
+    } else {
+      newDates = direction === 'prev' 
+        ? getPreviousMonth(currentStart)
+        : getNextMonth(currentStart);
+    }
+    
+    setCurrentDates(newDates);
   };
 
-  if (currentWeekDates.length === 0) {
+  const getRangeString = () => {
+    if (viewMode === 'week') {
+      return getWeekRangeString(currentDates);
+    } else {
+      return getMonthRangeString(currentDates);
+    }
+  };
+
+  if (currentDates.length === 0) {
     return <div>Loading calendar...</div>;
   }
+
+  const renderWeekView = () => (
+    <div className="calendar-grid" id="calendar-grid">
+      {timeSlots.map((time) => (
+        <React.Fragment key={time}>
+          <div className="time-slot time-label">{time}</div>
+          {currentDates.map((date) => {
+            const scheduledTask = getScheduledTask(date, time);
+            return (
+              <div
+                key={`${date.date.toISOString()}-${time}`}
+                className={`time-slot ${date.isToday ? 'today' : ''}`}
+                data-date={date.date.toISOString().split('T')[0]}
+                data-time={time}
+                onDragOver={onDragOver}
+                onDragEnter={onDragEnter}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+              >
+                {scheduledTask && (
+                  <ScheduledTask
+                    task={scheduledTask}
+                    onClick={onTaskClick}
+                    onDragStart={onScheduledTaskDragStart}
+                    onDragEnd={onScheduledTaskDragEnd}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+
+  const renderMonthView = () => {
+    const weeks: CalendarDate[][] = [];
+    for (let i = 0; i < currentDates.length; i += 7) {
+      weeks.push(currentDates.slice(i, i + 7));
+    }
+
+    return (
+      <div className="month-view">
+        <div className="month-header">
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+            <div key={day} className="month-day-header">{day}</div>
+          ))}
+        </div>
+        <div className="month-grid">
+          {weeks.map((week, weekIndex) => (
+            <div key={weekIndex} className="month-week">
+              {week.map((date) => {
+                const dayTasks = timeSlots
+                  .map(time => getScheduledTask(date, time))
+                  .filter(Boolean);
+                
+                return (
+                  <div
+                    key={date.date.toISOString()}
+                    className={`month-day ${date.isToday ? 'today' : ''}`}
+                    data-date={date.date.toISOString().split('T')[0]}
+                    data-time="9:00 AM"
+                    onDragOver={onDragOver}
+                    onDragEnter={onDragEnter}
+                    onDragLeave={onDragLeave}
+                    onDrop={onDrop}
+                  >
+                    <div className="month-day-number">{date.dayNumber}</div>
+                    <div className="month-day-tasks">
+                      {dayTasks.slice(0, 3).map((task) => (
+                        <div
+                          key={task!.id}
+                          className="month-task"
+                          onClick={() => onTaskClick(task!)}
+                          style={{ backgroundColor: task!.priority === 'p1' ? '#ff6b6b' : task!.priority === 'p2' ? '#ffa500' : '#4ecdc4' }}
+                        >
+                          {task!.title.length > 20 ? task!.title.substring(0, 20) + '...' : task!.title}
+                        </div>
+                      ))}
+                      {dayTasks.length > 3 && (
+                        <div className="month-task-more">+{dayTasks.length - 3} more</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="calendar-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <button 
-          onClick={() => navigateWeek('prev')}
+          onClick={() => navigate('prev')}
           className="calendar-nav-button"
         >
           ← Previous
         </button>
         
-        <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>
-          📅 {getWeekRangeString(currentWeekDates)}
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>
+            📅 {getRangeString()}
+          </h2>
+          
+          {onViewModeChange && (
+            <div className="view-mode-toggle">
+              <button
+                onClick={() => onViewModeChange('week')}
+                className={`view-mode-button ${viewMode === 'week' ? 'active' : ''}`}
+              >
+                Week
+              </button>
+              <button
+                onClick={() => onViewModeChange('month')}
+                className={`view-mode-button ${viewMode === 'month' ? 'active' : ''}`}
+              >
+                Month
+              </button>
+            </div>
+          )}
+        </div>
         
         <button 
-          onClick={() => navigateWeek('next')}
+          onClick={() => navigate('next')}
           className="calendar-nav-button"
         >
           Next →
         </button>
       </div>
       
-      <div className="calendar-header">
-        <div className="time-label"></div>
-        {currentWeekDates.map((date) => (
-          <div key={date.date.toISOString()} style={{ fontWeight: date.isToday ? 'bold' : 'normal' }}>
-            {formatCalendarHeaderDate(date)}
-          </div>
-        ))}
-      </div>
+      {viewMode === 'week' && (
+        <div className="calendar-header">
+          <div className="time-label"></div>
+          {currentDates.map((date) => (
+            <div key={date.date.toISOString()} style={{ fontWeight: date.isToday ? 'bold' : 'normal' }}>
+              {formatCalendarHeaderDate(date)}
+            </div>
+          ))}
+        </div>
+      )}
 
-      <div className="calendar-grid" id="calendar-grid">
-        {timeSlots.map((time) => (
-          <React.Fragment key={time}>
-            <div className="time-slot time-label">{time}</div>
-            {currentWeekDates.map((date) => {
-              const scheduledTask = getScheduledTask(date, time);
-              return (
-                <div
-                  key={`${date.date.toISOString()}-${time}`}
-                  className={`time-slot ${date.isToday ? 'today' : ''}`}
-                  data-date={date.date.toISOString().split('T')[0]}
-                  data-time={time}
-                  onDragOver={onDragOver}
-                  onDragEnter={onDragEnter}
-                  onDragLeave={onDragLeave}
-                  onDrop={onDrop}
-                >
-                  {scheduledTask && (
-                    <ScheduledTask
-                      task={scheduledTask}
-                      onClick={onTaskClick}
-                      onDragStart={onScheduledTaskDragStart}
-                      onDragEnd={onScheduledTaskDragEnd}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </React.Fragment>
-        ))}
-      </div>
+      {viewMode === 'week' ? renderWeekView() : renderMonthView()}
     </div>
   );
 };

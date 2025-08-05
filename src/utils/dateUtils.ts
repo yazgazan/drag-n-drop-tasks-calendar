@@ -127,3 +127,94 @@ export const getNextWeek = (currentWeekStart: Date): CalendarDate[] => {
   nextWeekStart.setDate(currentWeekStart.getDate() + 7);
   return getCurrentWeekDates(nextWeekStart);
 };
+
+/**
+ * Get the start of the month (first day)
+ */
+export const getStartOfMonth = (date: Date = new Date()): Date => {
+  const d = new Date(date);
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+};
+
+/**
+ * Get the end of the month (last day)
+ */
+export const getEndOfMonth = (date: Date = new Date()): Date => {
+  const d = new Date(date);
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+};
+
+/**
+ * Get an array of dates for the current month including leading/trailing days
+ * to fill complete weeks (starts on Monday)
+ */
+export const getCurrentMonthDates = (baseDate: Date = new Date()): CalendarDate[] => {
+  const startOfMonth = getStartOfMonth(baseDate);
+  const endOfMonth = getEndOfMonth(baseDate);
+  const today = new Date();
+  const currentWeekStart = getStartOfWeek(today);
+  const currentWeekEnd = getEndOfWeek(today);
+  
+  // Get the Monday of the week containing the first day of the month
+  const calendarStart = getStartOfWeek(startOfMonth);
+  
+  // Get the Sunday of the week containing the last day of the month
+  const calendarEnd = getEndOfWeek(endOfMonth);
+  
+  const monthDates: CalendarDate[] = [];
+  
+  const currentDate = new Date(calendarStart);
+  while (currentDate <= calendarEnd) {
+    const isToday = currentDate.toDateString() === today.toDateString();
+    const isCurrentWeek = currentDate >= currentWeekStart && currentDate <= currentWeekEnd;
+    
+    monthDates.push({
+      date: new Date(currentDate),
+      dayName: currentDate.toLocaleDateString('en-US', { weekday: 'long' }),
+      shortDayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
+      dayNumber: currentDate.getDate(),
+      monthName: currentDate.toLocaleDateString('en-US', { month: 'long' }),
+      shortMonthName: currentDate.toLocaleDateString('en-US', { month: 'short' }),
+      isToday,
+      isCurrentWeek
+    });
+    
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return monthDates;
+};
+
+/**
+ * Get month range string for display
+ */
+export const getMonthRangeString = (monthDates: CalendarDate[]): string => {
+  if (monthDates.length === 0) return '';
+  
+  // Find the first date that's actually in the target month
+  const targetMonth = monthDates.find(date => 
+    date.date.getDate() >= 1 && date.date.getDate() <= 31
+  );
+  
+  if (!targetMonth) return '';
+  
+  return `${targetMonth.monthName} ${targetMonth.date.getFullYear()}`;
+};
+
+/**
+ * Get previous month dates
+ */
+export const getPreviousMonth = (currentMonth: Date): CalendarDate[] => {
+  const prevMonth = new Date(currentMonth);
+  prevMonth.setMonth(currentMonth.getMonth() - 1);
+  return getCurrentMonthDates(prevMonth);
+};
+
+/**
+ * Get next month dates
+ */
+export const getNextMonth = (currentMonth: Date): CalendarDate[] => {
+  const nextMonth = new Date(currentMonth);
+  nextMonth.setMonth(currentMonth.getMonth() + 1);
+  return getCurrentMonthDates(nextMonth);
+};

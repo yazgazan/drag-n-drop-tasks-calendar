@@ -20,8 +20,8 @@ This document outlines the tasks needed to transform the proof of concept into a
 - [x] **Add current week/month display in calendar header**
 - [x] **Implement date-based calendar logic (current week, proper date calculations)**
 - [x] Add calendar navigation (arrows for week/month)
-- [ ] Implement multiple calendar view modes (week/month)
-- [ ] Add task editing functionality (replace placeholder alert)
+- [x] Implement multiple calendar view modes (week/month)
+- [x] Add task editing functionality (replace placeholder alert)
 - [x] **Update calendar data structure to use actual dates instead of generic day names**
 
 ### 🎯 **CRITICAL - Task Date Updates**

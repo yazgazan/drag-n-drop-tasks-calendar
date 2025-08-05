@@ -2,20 +2,24 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Task, ScheduledTasks, ScheduledTask } from './types/task';
 import { TodoistApi, TodoistApiError } from './services/todoist-api';
 import { AuthService } from './services/auth';
-import { convertTodoistTaskToTask } from './utils/taskConverter';
+import { convertTodoistTaskToTask, convertTaskToTodoistTask } from './utils/taskConverter';
 import { calendarSlotToDate } from './utils/dateUtils';
 import TaskList from './components/TaskList/TaskList';
-import Calendar from './components/Calendar/Calendar';
+import Calendar, { CalendarViewMode } from './components/Calendar/Calendar';
 import TaskModal from './components/TaskModal/TaskModal';
+import TaskEditModal from './components/TaskModal/TaskEditModal';
 
 function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTasks>({});
   const [modalTask, setModalTask] = useState<ScheduledTask | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<ScheduledTask | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
   const draggedTaskRef = useRef<Task | null>(null);
   const draggedScheduledTaskRef = useRef<ScheduledTask | null>(null);
 
@@ -428,7 +432,65 @@ function App() {
   };
 
   const handleEditTask = () => {
-    alert('Edit functionality would open a task edit form here! 📝');
+    if (modalTask) {
+      setEditingTask(modalTask);
+      setIsEditModalOpen(true);
+      setIsModalOpen(false);
+    }
+  };
+
+  const handleSaveTask = async (updatedTaskData: Partial<ScheduledTask>) => {
+    if (!editingTask) return;
+
+    const slotKey = editingTask.date ? 
+      `${editingTask.date}-${editingTask.time}` : 
+      `${editingTask.day}-${editingTask.time}`;
+
+    try {
+      // Convert to Todoist format for API call
+      const tempTask: Task = {
+        id: editingTask.id,
+        title: updatedTaskData.title || editingTask.title,
+        description: updatedTaskData.description || editingTask.description,
+        priority: updatedTaskData.priority || editingTask.priority,
+        labels: updatedTaskData.labels || editingTask.labels
+      };
+      
+      const todoistTaskData = convertTaskToTodoistTask(tempTask);
+      
+      // Update task in Todoist API
+      await TodoistApi.updateTask(editingTask.id, {
+        content: todoistTaskData.content,
+        description: todoistTaskData.description,
+        priority: todoistTaskData.priority,
+        labels: todoistTaskData.labels
+      });
+
+      // Update local state
+      const updatedTask: ScheduledTask = {
+        ...editingTask,
+        ...updatedTaskData
+      };
+
+      setScheduledTasks(prev => ({
+        ...prev,
+        [slotKey]: updatedTask
+      }));
+
+      console.log(`Task "${updatedTask.title}" updated successfully`);
+
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      const errorMessage = error instanceof TodoistApiError 
+        ? `Failed to update task: ${error.message}` 
+        : 'Failed to update task. Please try again.';
+      throw new Error(errorMessage);
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingTask(null);
   };
 
   if (loading) {
@@ -525,6 +587,8 @@ function App() {
         onTaskClick={handleTaskClick}
         onScheduledTaskDragStart={handleScheduledTaskDragStart}
         onScheduledTaskDragEnd={handleDragEnd}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
       <TaskModal
         isOpen={isModalOpen}
@@ -532,6 +596,12 @@ function App() {
         onClose={handleCloseModal}
         onRemove={handleRemoveTask}
         onEdit={handleEditTask}
+      />
+      <TaskEditModal
+        isOpen={isEditModalOpen}
+        task={editingTask}
+        onClose={handleCloseEditModal}
+        onSave={handleSaveTask}
       />
     </div>
   );
