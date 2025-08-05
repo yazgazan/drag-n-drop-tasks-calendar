@@ -66,3 +66,34 @@ export interface ModalTaskData {
   time: string;
   slot: HTMLElement;
 }
+
+// New API v1 Types
+export interface SyncResponse {
+  sync_token: string;
+  full_sync: boolean;
+  items?: TodoistTask[];
+  projects?: TodoistProject[];
+  labels?: TodoistLabel[];
+  sync_status?: SyncStatus;
+}
+
+export interface SyncStatus {
+  [uuid: string]: {
+    error_code?: number;
+    error?: string;
+    error_extra?: unknown;
+  };
+}
+
+export interface Command {
+  type: string;
+  uuid: string;
+  args: Record<string, unknown>;
+  temp_id?: string;
+}
+
+export interface SyncRequest {
+  sync_token: string;
+  resource_types?: string[];
+  commands?: Command[];
+}

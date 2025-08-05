@@ -40,38 +40,77 @@ function App() {
           TodoistApi.getProjects()
         ]);
         
+        console.log('Loaded tasks:', todoistTasks.length, 'projects:', projects.length);
+        console.log('Sample tasks:', todoistTasks.slice(0, 2));
+        
         // Separate unscheduled and scheduled tasks
         const unscheduledTasks = todoistTasks
           .filter(task => !task.due)
           .map(task => convertTodoistTaskToTask(task, projects));
           
         const scheduledTasks = todoistTasks
-          .filter(task => task.due && task.due.datetime)
+          .filter(task => task.due && task.due.date) // Only check for due.date as it's always present
           .map(task => convertTodoistTaskToTask(task, projects));
+          
+        console.log('Scheduled tasks found:', scheduledTasks.length);
+        console.log('First few scheduled tasks:', scheduledTasks.slice(0, 3).map(t => ({id: t.id, title: t.title})));
         
         // Convert scheduled tasks to ScheduledTasks format
         const scheduledTasksMap: ScheduledTasks = {};
         scheduledTasks.forEach(task => {
           const originalTodoistTask = todoistTasks.find(t => t.id === task.id);
-          if (originalTodoistTask?.due?.datetime) {
-            const dueDate = new Date(originalTodoistTask.due.datetime);
-            const dateKey = getDateKey(dueDate);
-            const timeKey = dueDate.toLocaleTimeString('en-US', { 
-              hour: 'numeric', 
-              minute: '2-digit',
-              hour12: true 
-            });
+          
+          if (originalTodoistTask?.due?.date) {
+            let dueDate: Date;
+            let timeKey: string;
             
-            const scheduledTask: ScheduledTask = {
-              ...task,
-              day: dueDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(),
-              time: timeKey,
-              date: dateKey
-            };
+            // Parse the due date - it might be in different formats
+            const dueDateString = originalTodoistTask.due.date;
+            console.log('Processing task:', task.title, 'with due date:', dueDateString);
             
-            scheduledTasksMap[`${dateKey}-${timeKey}`] = scheduledTask;
+            try {
+              // Handle various date formats from the API
+              if (dueDateString.includes('T')) {
+                // Has time component
+                dueDate = new Date(dueDateString);
+                timeKey = dueDate.toLocaleTimeString('en-US', { 
+                  hour: 'numeric', 
+                  minute: '2-digit',
+                  hour12: true 
+                });
+              } else {
+                // Date only, add default time
+                dueDate = new Date(dueDateString + 'T09:00:00');
+                timeKey = '9:00 AM';
+              }
+              
+              // Ensure the date is valid
+              if (isNaN(dueDate.getTime())) {
+                console.warn('Invalid date for task:', task.title, dueDateString);
+                return;
+              }
+              
+              const dateKey = getDateKey(dueDate);
+              
+              const scheduledTask: ScheduledTask = {
+                ...task,
+                day: dueDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(),
+                time: timeKey,
+                date: dateKey
+              };
+              
+              const slotKey = `${dateKey}-${timeKey}`;
+              console.log('Adding scheduled task to slot:', slotKey, 'for task:', task.title);
+              scheduledTasksMap[slotKey] = scheduledTask;
+              
+            } catch (error) {
+              console.error('Error processing due date for task:', task.title, error);
+            }
           }
         });
+        
+        console.log('Final scheduled tasks map:', Object.keys(scheduledTasksMap).length, 'entries');
+        console.log('Scheduled task keys:', Object.keys(scheduledTasksMap));
         
         setTasks(unscheduledTasks);
         setScheduledTasks(scheduledTasksMap);
@@ -321,9 +360,11 @@ function App() {
         }
 
         // Update task in Todoist API
-        // Use due_datetime for tasks with specific times
+        // Use due object structure for API v1
         await TodoistApi.updateTask(taskToSchedule.id, {
-          due_datetime: dueDateTime
+          due: {
+            date: dueDateTime
+          }
         });
 
         console.log(`Task "${taskToSchedule.title}" scheduled for ${dueDateTime}`);

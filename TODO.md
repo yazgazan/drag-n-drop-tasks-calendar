@@ -37,8 +37,8 @@ This document outlines the tasks needed to transform the proof of concept into a
 ### 💻 Code Architecture
 - [x] Add TypeScript support and create type definitions
 - [x] Refactor monolithic HTML/JS into modular components
-- [ ] Add state management (Context/Zustand) for task data
-- [ ] Implement optimistic updates for better UX
+- [x] Add state management (Context/Zustand) for task data
+- [x] Implement optimistic updates for better UX
 
 ## Low Priority - Polish & Robustness
 
