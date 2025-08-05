@@ -418,6 +418,18 @@ function App() {
     setIsModalOpen(true);
   };
 
+  const handleUnscheduledTaskClick = (task: Task) => {
+    // Convert unscheduled task to ScheduledTask format for the modal
+    const scheduledTask: ScheduledTask = {
+      ...task,
+      day: '',
+      time: '',
+      date: ''
+    };
+    setModalTask(scheduledTask);
+    setIsModalOpen(true);
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setModalTask(null);
@@ -611,6 +623,7 @@ function App() {
         onDragEnter={handleUnscheduledDragEnter}
         onDragLeave={handleUnscheduledDragLeave}
         onDrop={handleUnscheduledDrop}
+        onTaskClick={handleUnscheduledTaskClick}
       />
       <Calendar
         scheduledTasks={scheduledTasks}

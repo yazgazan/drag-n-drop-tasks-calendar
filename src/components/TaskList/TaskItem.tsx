@@ -5,9 +5,10 @@ interface TaskItemProps {
   task: Task;
   onDragStart: (e: React.DragEvent<HTMLDivElement>, task: Task) => void;
   onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void;
+  onClick?: (task: Task) => void;
 }
 
-const TaskItem: React.FC<TaskItemProps> = ({ task, onDragStart, onDragEnd }) => {
+const TaskItem: React.FC<TaskItemProps> = ({ task, onDragStart, onDragEnd, onClick }) => {
   return (
     <div
       className="task-item"
@@ -15,6 +16,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onDragStart, onDragEnd }) => 
       data-task-id={task.id}
       onDragStart={(e) => onDragStart(e, task)}
       onDragEnd={onDragEnd}
+      onClick={() => onClick?.(task)}
     >
       <div className={`task-priority priority-${task.priority}`}></div>
       <div className="task-content">

@@ -35,7 +35,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, task, onClose, onRemove, 
 
   if (!task) return null;
 
-  const dayName = task.day.charAt(0).toUpperCase() + task.day.slice(1);
+  const isScheduled = task.day && task.time;
+  const dayName = task.day ? task.day.charAt(0).toUpperCase() + task.day.slice(1) : '';
 
   return (
     <div 
@@ -62,8 +63,18 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, task, onClose, onRemove, 
             {task.description}
           </div>
           <div className="modal-details">
-            <div className="modal-detail-label">📅 Scheduled:</div>
-            <div className="modal-detail-value">{dayName}, {task.time}</div>
+            {isScheduled && (
+              <>
+                <div className="modal-detail-label">📅 Scheduled:</div>
+                <div className="modal-detail-value">{dayName}, {task.time}</div>
+              </>
+            )}
+            {task.project_name && (
+              <>
+                <div className="modal-detail-label">📁 Project:</div>
+                <div className="modal-detail-value">{task.project_name}</div>
+              </>
+            )}
             <div className="modal-detail-label">🏷️ Labels:</div>
             <div className="modal-detail-value">
               <div className="modal-labels">
@@ -78,9 +89,11 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, task, onClose, onRemove, 
           <button className="modal-button secondary" onClick={onEdit}>
             ✏️ Edit
           </button>
-          <button className="modal-button danger" onClick={onRemove}>
-            🗑️ Remove
-          </button>
+          {isScheduled && (
+            <button className="modal-button danger" onClick={onRemove}>
+              🗑️ Unschedule
+            </button>
+          )}
         </div>
       </div>
     </div>

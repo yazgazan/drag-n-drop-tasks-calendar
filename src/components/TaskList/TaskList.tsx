@@ -10,6 +10,7 @@ interface TaskListProps {
   onDragEnter?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDragLeave?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>) => void;
+  onTaskClick?: (task: Task) => void;
 }
 
 const TaskList: React.FC<TaskListProps> = ({ 
@@ -19,7 +20,8 @@ const TaskList: React.FC<TaskListProps> = ({
   onDragOver, 
   onDragEnter, 
   onDragLeave, 
-  onDrop 
+  onDrop,
+  onTaskClick 
 }) => {
   // Group tasks by project
   const groupedTasks = tasks.reduce((groups, task) => {
@@ -61,6 +63,7 @@ const TaskList: React.FC<TaskListProps> = ({
                   task={task}
                   onDragStart={onDragStart}
                   onDragEnd={onDragEnd}
+                  onClick={onTaskClick}
                 />
               ))}
             </div>
