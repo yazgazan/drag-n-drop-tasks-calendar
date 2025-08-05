@@ -242,3 +242,47 @@ export const getNextMonth = (currentMonth: Date): CalendarDate[] => {
   nextMonth.setMonth(currentMonth.getMonth() + 1);
   return getCurrentMonthDates(nextMonth);
 };
+
+/**
+ * Find the optimal time slot for scheduling in month view
+ * Priority: 5pm and after first, then work backwards from 5pm, finally default to 5pm
+ */
+export const findOptimalTimeSlot = (
+  date: CalendarDate, 
+  scheduledTasks: { [key: string]: unknown[] }, 
+  timeSlots: string[]
+): string => {
+  const dateKey = getDateKey(date.date);
+  
+  // Find 5pm index as our starting point
+  const fivePmIndex = timeSlots.findIndex(slot => slot === '5:00 PM');
+  if (fivePmIndex === -1) {
+    // Fallback if 5pm not found
+    return '5:00 PM';
+  }
+  
+  // First, try 5pm and onwards (5pm, 6pm, 7pm, etc.)
+  for (let i = fivePmIndex; i < timeSlots.length; i++) {
+    const timeSlot = timeSlots[i];
+    const slotKey = `${dateKey}-${timeSlot}`;
+    
+    // Check if this slot is free (no tasks scheduled)
+    if (!scheduledTasks[slotKey] || scheduledTasks[slotKey].length === 0) {
+      return timeSlot;
+    }
+  }
+  
+  // If no slots available after 5pm, work backwards from 4pm
+  for (let i = fivePmIndex - 1; i >= 0; i--) {
+    const timeSlot = timeSlots[i];
+    const slotKey = `${dateKey}-${timeSlot}`;
+    
+    // Check if this slot is free (no tasks scheduled)
+    if (!scheduledTasks[slotKey] || scheduledTasks[slotKey].length === 0) {
+      return timeSlot;
+    }
+  }
+  
+  // If all slots are occupied, default to 5pm (allow multiple tasks)
+  return '5:00 PM';
+};

@@ -40,6 +40,10 @@ This document outlines the tasks needed to transform the proof of concept into a
 - [x] Add state management (Context/Zustand) for task data
 - [x] Implement optimistic updates for better UX
 
+### 🎯 Smart Scheduling Features
+- [x] **Enable multiple tasks per time slot (removes scheduling conflicts)**
+- [x] **Smart time selection for month view (starts from 5pm, fallback logic)**
+
 ## Low Priority - Polish & Robustness
 
 ### ♿ Accessibility

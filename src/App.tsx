@@ -3,7 +3,8 @@ import { Task, ScheduledTasks, ScheduledTask } from './types/task';
 import { TodoistApi, TodoistApiError } from './services/todoist-api';
 import { AuthService } from './services/auth';
 import { convertTodoistTaskToTask, convertTaskToTodoistTask } from './utils/taskConverter';
-import { calendarSlotToDate, getDateKey } from './utils/dateUtils';
+import { calendarSlotToDate, getDateKey, findOptimalTimeSlot } from './utils/dateUtils';
+import { timeSlots } from './constants/calendar';
 import TaskList from './components/TaskList/TaskList';
 import Calendar, { CalendarViewMode } from './components/Calendar/Calendar';
 import TaskModal from './components/TaskModal/TaskModal';
@@ -303,30 +304,38 @@ function App() {
     };
 
     if (taskToSchedule && date && time) {
-      // Multiple tasks can now be scheduled in the same slot
-      const dateSlotKey = `${date}-${time}`;
+      // Create CalendarDate object from the date string first
+      const calendarDate = {
+        date: new Date(date),
+        dayName: new Date(date).toLocaleDateString('en-US', { weekday: 'long' }),
+        shortDayName: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+        dayNumber: new Date(date).getDate(),
+        monthName: new Date(date).toLocaleDateString('en-US', { month: 'long' }),
+        shortMonthName: new Date(date).toLocaleDateString('en-US', { month: 'short' }),
+        isToday: new Date(date).toDateString() === new Date().toDateString(),
+        isCurrentWeek: true // Simplified for now
+      };
+
+      // For month view, use smart time selection instead of the default time
+      let finalTime = time;
+      if (isMonthViewDay) {
+        finalTime = findOptimalTimeSlot(calendarDate, scheduledTasks, timeSlots);
+        console.log(`Month view: Using smart time selection - ${finalTime} instead of ${time}`);
+      }
+      
+      const dateSlotKey = `${date}-${finalTime}`;
 
       try {
-        // Create CalendarDate object from the date string
-        const calendarDate = {
-          date: new Date(date),
-          dayName: new Date(date).toLocaleDateString('en-US', { weekday: 'long' }),
-          shortDayName: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-          dayNumber: new Date(date).getDate(),
-          monthName: new Date(date).toLocaleDateString('en-US', { month: 'long' }),
-          shortMonthName: new Date(date).toLocaleDateString('en-US', { month: 'short' }),
-          isToday: new Date(date).toDateString() === new Date().toDateString(),
-          isCurrentWeek: true // Simplified for now
-        };
 
         // Convert to ISO datetime for Todoist API
-        const dueDateTime = calendarSlotToDate(calendarDate, time);
+        const dueDateTime = calendarSlotToDate(calendarDate, finalTime);
         
         console.log('Scheduling task:', {
           taskId: taskToSchedule.id,
           taskTitle: taskToSchedule.title,
           originalDate: date,
           originalTime: time,
+          finalTime: finalTime,
           calendarDate: calendarDate,
           dueDateTime: dueDateTime
         });
@@ -335,7 +344,7 @@ function App() {
         const scheduledTask: ScheduledTask = { 
           ...taskToSchedule, 
           day: calendarDate.dayName.toLowerCase(), 
-          time,
+          time: finalTime,
           date: date
         };
         setScheduledTasks(prev => {
@@ -367,7 +376,8 @@ function App() {
         console.error('Request details:', {
           taskId: taskToSchedule.id,
           date: date,
-          time: time
+          originalTime: time,
+          finalTime: finalTime
         });
         
         // Rollback optimistic update
