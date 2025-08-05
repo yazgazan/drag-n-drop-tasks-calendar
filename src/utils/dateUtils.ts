@@ -211,12 +211,9 @@ export const getCurrentMonthDates = (baseDate: Date = new Date()): CalendarDate[
 export const getMonthRangeString = (monthDates: CalendarDate[]): string => {
   if (monthDates.length === 0) return '';
   
-  // Find the first date that's actually in the target month
-  const targetMonth = monthDates.find(date => 
-    date.date.getDate() >= 1 && date.date.getDate() <= 31
-  );
-  
-  if (!targetMonth) return '';
+  // Find the middle date of the month view (around day 15) to ensure we get the main month
+  const middleIndex = Math.floor(monthDates.length / 2);
+  const targetMonth = monthDates[middleIndex];
   
   return `${targetMonth.monthName} ${targetMonth.date.getFullYear()}`;
 };

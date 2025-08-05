@@ -63,17 +63,20 @@ const Calendar: React.FC<CalendarProps> = ({
   const navigate = (direction: 'prev' | 'next') => {
     if (currentDates.length === 0) return;
     
-    const currentStart = currentDates[0].date;
     let newDates: CalendarDate[];
     
     if (viewMode === 'week') {
+      const currentStart = currentDates[0].date;
       newDates = direction === 'prev' 
         ? getPreviousWeek(currentStart)
         : getNextWeek(currentStart);
     } else {
+      // For month view, use the middle date to ensure we're working with the main month
+      const middleIndex = Math.floor(currentDates.length / 2);
+      const currentMonthDate = currentDates[middleIndex].date;
       newDates = direction === 'prev' 
-        ? getPreviousMonth(currentStart)
-        : getNextMonth(currentStart);
+        ? getPreviousMonth(currentMonthDate)
+        : getNextMonth(currentMonthDate);
     }
     
     setCurrentDates(newDates);
