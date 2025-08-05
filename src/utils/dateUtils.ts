@@ -90,6 +90,18 @@ export const getWeekRangeString = (weekDates: CalendarDate[]): string => {
 };
 
 /**
+ * Get consistent date key for task storage/retrieval
+ * This ensures both views use the same date representation
+ */
+export const getDateKey = (date: Date): string => {
+  // Use local date representation to avoid timezone issues
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
  * Convert calendar slot to ISO date string for Todoist API
  */
 export const calendarSlotToDate = (date: CalendarDate, timeSlot: string): string => {
@@ -103,7 +115,12 @@ export const calendarSlotToDate = (date: CalendarDate, timeSlot: string): string
     hour24 = 0;
   }
   
+  // Use the date directly and set time in local timezone
+  // This ensures consistency with how dates are displayed
   const dateTime = new Date(date.date);
+  // Reset to start of day first to avoid timezone issues
+  dateTime.setHours(0, 0, 0, 0);
+  // Then set the desired time
   dateTime.setHours(hour24, minutes || 0, 0, 0);
   
   // Return in RFC3339 format that Todoist expects
@@ -163,23 +180,26 @@ export const getCurrentMonthDates = (baseDate: Date = new Date()): CalendarDate[
   
   const monthDates: CalendarDate[] = [];
   
-  const currentDate = new Date(calendarStart);
-  while (currentDate <= calendarEnd) {
-    const isToday = currentDate.toDateString() === today.toDateString();
-    const isCurrentWeek = currentDate >= currentWeekStart && currentDate <= currentWeekEnd;
+  // Calculate total days needed
+  const totalDays = Math.ceil((calendarEnd.getTime() - calendarStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  
+  for (let i = 0; i < totalDays; i++) {
+    const date = new Date(calendarStart);
+    date.setDate(calendarStart.getDate() + i);
+    
+    const isToday = date.toDateString() === today.toDateString();
+    const isCurrentWeek = date >= currentWeekStart && date <= currentWeekEnd;
     
     monthDates.push({
-      date: new Date(currentDate),
-      dayName: currentDate.toLocaleDateString('en-US', { weekday: 'long' }),
-      shortDayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
-      dayNumber: currentDate.getDate(),
-      monthName: currentDate.toLocaleDateString('en-US', { month: 'long' }),
-      shortMonthName: currentDate.toLocaleDateString('en-US', { month: 'short' }),
+      date,
+      dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
+      shortDayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      dayNumber: date.getDate(),
+      monthName: date.toLocaleDateString('en-US', { month: 'long' }),
+      shortMonthName: date.toLocaleDateString('en-US', { month: 'short' }),
       isToday,
       isCurrentWeek
     });
-    
-    currentDate.setDate(currentDate.getDate() + 1);
   }
   
   return monthDates;

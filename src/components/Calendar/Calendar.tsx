@@ -12,6 +12,7 @@ import {
   getMonthRangeString,
   getPreviousMonth,
   getNextMonth,
+  getDateKey,
   CalendarDate 
 } from '../../utils/dateUtils';
 
@@ -53,8 +54,8 @@ const Calendar: React.FC<CalendarProps> = ({
   }, [viewMode]);
 
   const getScheduledTask = (date: CalendarDate, time: string): ScheduledTaskType | undefined => {
-    // Support both new date-based keys and legacy day-based keys
-    const dateKey = `${date.date.toISOString().split('T')[0]}-${time}`;
+    // Use consistent date key to avoid timezone issues
+    const dateKey = `${getDateKey(date.date)}-${time}`;
     const legacyKey = `${date.dayName.toLowerCase()}-${time}`;
     return scheduledTasks[dateKey] || scheduledTasks[legacyKey];
   };
@@ -101,7 +102,7 @@ const Calendar: React.FC<CalendarProps> = ({
               <div
                 key={`${date.date.toISOString()}-${time}`}
                 className={`time-slot ${date.isToday ? 'today' : ''}`}
-                data-date={date.date.toISOString().split('T')[0]}
+                data-date={getDateKey(date.date)}
                 data-time={time}
                 onDragOver={onDragOver}
                 onDragEnter={onDragEnter}
@@ -149,7 +150,7 @@ const Calendar: React.FC<CalendarProps> = ({
                   <div
                     key={date.date.toISOString()}
                     className={`month-day ${date.isToday ? 'today' : ''}`}
-                    data-date={date.date.toISOString().split('T')[0]}
+                    data-date={getDateKey(date.date)}
                     data-time="9:00 AM"
                     onDragOver={onDragOver}
                     onDragEnter={onDragEnter}
@@ -162,7 +163,10 @@ const Calendar: React.FC<CalendarProps> = ({
                         <div
                           key={task!.id}
                           className="month-task"
+                          draggable={true}
                           onClick={() => onTaskClick(task!)}
+                          onDragStart={(e) => onScheduledTaskDragStart?.(e, task!)}
+                          onDragEnd={onScheduledTaskDragEnd}
                           style={{ backgroundColor: task!.priority === 'p1' ? '#ff6b6b' : task!.priority === 'p2' ? '#ffa500' : '#4ecdc4' }}
                         >
                           {task!.title.length > 20 ? task!.title.substring(0, 20) + '...' : task!.title}

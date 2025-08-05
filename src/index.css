@@ -709,6 +709,13 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
+.month-task.dragging {
+  opacity: 0.7;
+  transform: rotate(5deg) translateY(-1px);
+  cursor: grabbing;
+  z-index: 1000;
+}
+
 .month-task-more {
   color: #666;
   font-size: 10px;

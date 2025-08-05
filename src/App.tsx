@@ -3,7 +3,7 @@ import { Task, ScheduledTasks, ScheduledTask } from './types/task';
 import { TodoistApi, TodoistApiError } from './services/todoist-api';
 import { AuthService } from './services/auth';
 import { convertTodoistTaskToTask, convertTaskToTodoistTask } from './utils/taskConverter';
-import { calendarSlotToDate } from './utils/dateUtils';
+import { calendarSlotToDate, getDateKey } from './utils/dateUtils';
 import TaskList from './components/TaskList/TaskList';
 import Calendar, { CalendarViewMode } from './components/Calendar/Calendar';
 import TaskModal from './components/TaskModal/TaskModal';
@@ -52,7 +52,7 @@ function App() {
           const originalTodoistTask = todoistTasks.find(t => t.id === task.id);
           if (originalTodoistTask?.due?.datetime) {
             const dueDate = new Date(originalTodoistTask.due.datetime);
-            const dateKey = dueDate.toISOString().split('T')[0];
+            const dateKey = getDateKey(dueDate);
             const timeKey = dueDate.toLocaleTimeString('en-US', { 
               hour: 'numeric', 
               minute: '2-digit',
@@ -147,15 +147,24 @@ function App() {
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const target = e.target as HTMLElement;
-    if (target.classList.contains('time-slot') && !target.classList.contains('time-label')) {
-      target.classList.add('drop-zone-active');
+    
+    // Find the correct drop target (may be a child element)
+    const dropTarget = target.closest('.time-slot, .month-day') as HTMLElement;
+    
+    if (dropTarget) {
+      const isWeekViewSlot = dropTarget.classList.contains('time-slot') && !dropTarget.classList.contains('time-label');
+      const isMonthViewDay = dropTarget.classList.contains('month-day');
       
-      // Add hover effect with slight delay
-      setTimeout(() => {
-        if (target.classList.contains('drop-zone-active')) {
-          target.classList.add('drop-zone-hover');
-        }
-      }, 100);
+      if (isWeekViewSlot || isMonthViewDay) {
+        dropTarget.classList.add('drop-zone-active');
+        
+        // Add hover effect with slight delay
+        setTimeout(() => {
+          if (dropTarget.classList.contains('drop-zone-active')) {
+            dropTarget.classList.add('drop-zone-hover');
+          }
+        }, 100);
+      }
     }
   };
 
@@ -169,8 +178,12 @@ function App() {
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target.classList.contains('time-slot')) {
-      target.classList.remove('drop-zone-active', 'drop-zone-hover');
+    
+    // Find the correct drop target (may be a child element)
+    const dropTarget = target.closest('.time-slot, .month-day') as HTMLElement;
+    
+    if (dropTarget && (dropTarget.classList.contains('time-slot') || dropTarget.classList.contains('month-day'))) {
+      dropTarget.classList.remove('drop-zone-active', 'drop-zone-hover');
     }
   };
 
@@ -184,14 +197,26 @@ function App() {
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const target = e.target as HTMLElement;
-    target.classList.remove('drop-zone-active', 'drop-zone-hover');
+    
+    // Find the correct drop target (may be a child element)
+    const dropTarget = target.closest('.time-slot, .month-day') as HTMLElement;
+    
+    if (!dropTarget) {
+      return;
+    }
+    
+    dropTarget.classList.remove('drop-zone-active', 'drop-zone-hover');
 
-    if (!target.classList.contains('time-slot') || target.classList.contains('time-label')) {
+    // Support both week view (.time-slot) and month view (.month-day)
+    const isWeekViewSlot = dropTarget.classList.contains('time-slot') && !dropTarget.classList.contains('time-label');
+    const isMonthViewDay = dropTarget.classList.contains('month-day');
+    
+    if (!isWeekViewSlot && !isMonthViewDay) {
       return;
     }
 
-    const date = target.dataset.date;
-    const time = target.dataset.time;
+    const date = dropTarget.dataset.date;
+    const time = dropTarget.dataset.time;
     
     // Handle both unscheduled tasks and scheduled tasks being moved between calendar slots
     const draggedTask = draggedTaskRef.current;
@@ -230,9 +255,9 @@ function App() {
       
       if (scheduledTasks[dateSlotKey]) {
         // Show feedback that slot is occupied
-        target.style.background = '#ffebee';
+        dropTarget.style.background = '#ffebee';
         setTimeout(() => {
-          target.style.background = '';
+          dropTarget.style.background = '';
         }, 500);
         return;
       }
@@ -312,9 +337,9 @@ function App() {
         }
         
         // Show error feedback
-        target.style.background = '#ffebee';
+        dropTarget.style.background = '#ffebee';
         setTimeout(() => {
-          target.style.background = '';
+          dropTarget.style.background = '';
         }, 1000);
         
         // More detailed error message
