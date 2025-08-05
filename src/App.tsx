@@ -17,6 +17,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const draggedTaskRef = useRef<Task | null>(null);
+  const draggedScheduledTaskRef = useRef<ScheduledTask | null>(null);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -113,14 +114,25 @@ function App() {
     target.classList.remove('dragging');
     
     // Clear all drop zone highlights
-    document.querySelectorAll('.drop-zone-active, .drop-zone-hover').forEach(el => {
-      el.classList.remove('drop-zone-active', 'drop-zone-hover');
+    document.querySelectorAll('.drop-zone-active, .drop-zone-hover, .unscheduled-drop-zone-active').forEach(el => {
+      el.classList.remove('drop-zone-active', 'drop-zone-hover', 'unscheduled-drop-zone-active');
     });
     
     // Reset dragged task after a small delay
     setTimeout(() => {
       draggedTaskRef.current = null;
+      draggedScheduledTaskRef.current = null;
     }, 50);
+  };
+
+  const handleScheduledTaskDragStart = (e: React.DragEvent<HTMLDivElement>, task: ScheduledTask) => {
+    draggedScheduledTaskRef.current = task;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.id.toString());
+    
+    // Add dragging class
+    const target = e.target as HTMLElement;
+    target.classList.add('dragging');
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -143,10 +155,25 @@ function App() {
     }
   };
 
+  const handleUnscheduledDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('unscheduled-drop-zone')) {
+      target.classList.add('unscheduled-drop-zone-active');
+    }
+  };
+
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (target.classList.contains('time-slot')) {
       target.classList.remove('drop-zone-active', 'drop-zone-hover');
+    }
+  };
+
+  const handleUnscheduledDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('unscheduled-drop-zone')) {
+      target.classList.remove('unscheduled-drop-zone-active');
     }
   };
 
@@ -155,15 +182,45 @@ function App() {
     const target = e.target as HTMLElement;
     target.classList.remove('drop-zone-active', 'drop-zone-hover');
 
-    if (!draggedTaskRef.current || !target.classList.contains('time-slot') || target.classList.contains('time-label')) {
+    if (!target.classList.contains('time-slot') || target.classList.contains('time-label')) {
       return;
     }
 
     const date = target.dataset.date;
     const time = target.dataset.time;
-    const task = draggedTaskRef.current;
+    
+    // Handle both unscheduled tasks and scheduled tasks being moved between calendar slots
+    const draggedTask = draggedTaskRef.current;
+    const draggedScheduledTask = draggedScheduledTaskRef.current;
+    
+    if (!draggedTask && !draggedScheduledTask) {
+      return;  
+    }
 
-    if (task && date && time) {
+    // If moving a scheduled task to a different slot, first remove from old slot
+    if (draggedScheduledTask) {
+      const oldSlotKey = draggedScheduledTask.date ? 
+        `${draggedScheduledTask.date}-${draggedScheduledTask.time}` : 
+        `${draggedScheduledTask.day}-${draggedScheduledTask.time}`;
+      
+      // Remove from old slot
+      setScheduledTasks(prev => {
+        const newScheduled = { ...prev };
+        delete newScheduled[oldSlotKey];
+        return newScheduled;
+      });
+    }
+
+    // Use the dragged task (either from unscheduled or scheduled)
+    const taskToSchedule = draggedTask || {
+      id: draggedScheduledTask!.id,
+      title: draggedScheduledTask!.title,
+      description: draggedScheduledTask!.description,
+      priority: draggedScheduledTask!.priority,
+      labels: draggedScheduledTask!.labels
+    };
+
+    if (taskToSchedule && date && time) {
       // Check if slot is already occupied (support both new and legacy keys)
       const dateSlotKey = `${date}-${time}`;
       
@@ -193,8 +250,8 @@ function App() {
         const dueDateTime = calendarSlotToDate(calendarDate, time);
         
         console.log('Scheduling task:', {
-          taskId: task.id,
-          taskTitle: task.title,
+          taskId: taskToSchedule.id,
+          taskTitle: taskToSchedule.title,
           originalDate: date,
           originalTime: time,
           calendarDate: calendarDate,
@@ -203,28 +260,30 @@ function App() {
         
         // Optimistically schedule the task in UI
         const scheduledTask: ScheduledTask = { 
-          ...task, 
+          ...taskToSchedule, 
           day: calendarDate.dayName.toLowerCase(), 
           time,
           date: date
         };
         setScheduledTasks(prev => ({ ...prev, [dateSlotKey]: scheduledTask }));
         
-        // Remove task from unscheduled tasks
-        setTasks(prev => prev.filter(t => t.id !== task.id));
+        // Remove task from unscheduled tasks (only if it was an unscheduled task)
+        if (draggedTask) {
+          setTasks(prev => prev.filter(t => t.id !== taskToSchedule.id));
+        }
 
         // Update task in Todoist API
         // Use due_datetime for tasks with specific times
-        await TodoistApi.updateTask(task.id, {
+        await TodoistApi.updateTask(taskToSchedule.id, {
           due_datetime: dueDateTime
         });
 
-        console.log(`Task "${task.title}" scheduled for ${dueDateTime}`);
+        console.log(`Task "${taskToSchedule.title}" scheduled for ${dueDateTime}`);
 
       } catch (error) {
         console.error('Failed to update task due date:', error);
         console.error('Request details:', {
-          taskId: task.id,
+          taskId: taskToSchedule.id,
           date: date,
           time: time
         });
@@ -236,8 +295,17 @@ function App() {
           return newScheduled;
         });
         
-        // Add task back to unscheduled tasks
-        setTasks(prev => [...prev, task]);
+        // Restore to original state
+        if (draggedTask) {
+          // Add task back to unscheduled tasks
+          setTasks(prev => [...prev, taskToSchedule]);
+        } else if (draggedScheduledTask) {
+          // Restore to original scheduled slot
+          const oldSlotKey = draggedScheduledTask.date ? 
+            `${draggedScheduledTask.date}-${draggedScheduledTask.time}` : 
+            `${draggedScheduledTask.day}-${draggedScheduledTask.time}`;
+          setScheduledTasks(prev => ({ ...prev, [oldSlotKey]: draggedScheduledTask }));
+        }
         
         // Show error feedback
         target.style.background = '#ffebee';
@@ -251,6 +319,61 @@ function App() {
           : 'Failed to schedule task. Please try again.';
         alert(errorMessage);
       }
+    }
+  };
+
+  const handleUnscheduledDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const target = e.target as HTMLElement;
+    target.classList.remove('unscheduled-drop-zone-active');
+
+    // Only handle scheduled tasks being dropped here
+    if (!draggedScheduledTaskRef.current) {
+      return;
+    }
+
+    const scheduledTask = draggedScheduledTaskRef.current;
+    const slotKey = scheduledTask.date ? 
+      `${scheduledTask.date}-${scheduledTask.time}` : 
+      `${scheduledTask.day}-${scheduledTask.time}`;
+
+    try {
+      // Optimistically remove from scheduled tasks
+      setScheduledTasks(prev => {
+        const newScheduled = { ...prev };
+        delete newScheduled[slotKey];
+        return newScheduled;
+      });
+      
+      // Add back to unscheduled tasks
+      const originalTask: Task = {
+        id: scheduledTask.id,
+        title: scheduledTask.title,
+        description: scheduledTask.description,
+        priority: scheduledTask.priority,
+        labels: scheduledTask.labels
+      };
+      setTasks(prev => [...prev, originalTask]);
+      
+      // Clear due date in Todoist API
+      await TodoistApi.clearTaskDueDate(scheduledTask.id);
+      
+      console.log(`Task "${scheduledTask.title}" unscheduled via drag and drop`);
+      
+    } catch (error) {
+      console.error('Failed to unschedule task:', error);
+      
+      // Rollback optimistic update
+      setScheduledTasks(prev => ({ ...prev, [slotKey]: scheduledTask }));
+      setTasks(prev => prev.filter(t => t.id !== scheduledTask.id));
+      
+      // Show error feedback
+      target.style.background = '#ffebee';
+      setTimeout(() => {
+        target.style.background = '';
+      }, 1000);
+      
+      alert('Failed to unschedule task. Please try again.');
     }
   };
 
@@ -388,6 +511,10 @@ function App() {
         tasks={tasks}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+        onDragEnter={handleUnscheduledDragEnter}
+        onDragLeave={handleUnscheduledDragLeave}
+        onDrop={handleUnscheduledDrop}
       />
       <Calendar
         scheduledTasks={scheduledTasks}
@@ -396,6 +523,8 @@ function App() {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onTaskClick={handleTaskClick}
+        onScheduledTaskDragStart={handleScheduledTaskDragStart}
+        onScheduledTaskDragEnd={handleDragEnd}
       />
       <TaskModal
         isOpen={isModalOpen}

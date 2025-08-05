@@ -11,6 +11,8 @@ interface CalendarProps {
   onDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   onTaskClick: (task: ScheduledTaskType) => void;
+  onScheduledTaskDragStart?: (e: React.DragEvent<HTMLDivElement>, task: ScheduledTaskType) => void;
+  onScheduledTaskDragEnd?: (e: React.DragEvent<HTMLDivElement>) => void;
 }
 
 const Calendar: React.FC<CalendarProps> = ({
@@ -19,7 +21,9 @@ const Calendar: React.FC<CalendarProps> = ({
   onDragEnter,
   onDragLeave,
   onDrop,
-  onTaskClick
+  onTaskClick,
+  onScheduledTaskDragStart,
+  onScheduledTaskDragEnd
 }) => {
   const [currentWeekDates, setCurrentWeekDates] = useState<CalendarDate[]>([]);
 
@@ -101,6 +105,8 @@ const Calendar: React.FC<CalendarProps> = ({
                     <ScheduledTask
                       task={scheduledTask}
                       onClick={onTaskClick}
+                      onDragStart={onScheduledTaskDragStart}
+                      onDragEnd={onScheduledTaskDragEnd}
                     />
                   )}
                 </div>
