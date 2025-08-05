@@ -192,6 +192,15 @@ function App() {
         // Convert to ISO datetime for Todoist API
         const dueDateTime = calendarSlotToDate(calendarDate, time);
         
+        console.log('Scheduling task:', {
+          taskId: task.id,
+          taskTitle: task.title,
+          originalDate: date,
+          originalTime: time,
+          calendarDate: calendarDate,
+          dueDateTime: dueDateTime
+        });
+        
         // Optimistically schedule the task in UI
         const scheduledTask: ScheduledTask = { 
           ...task, 
@@ -205,17 +214,20 @@ function App() {
         setTasks(prev => prev.filter(t => t.id !== task.id));
 
         // Update task in Todoist API
+        // Use due_datetime for tasks with specific times
         await TodoistApi.updateTask(task.id, {
-          due: {
-            date: date,
-            datetime: dueDateTime
-          }
+          due_datetime: dueDateTime
         });
 
         console.log(`Task "${task.title}" scheduled for ${dueDateTime}`);
 
       } catch (error) {
         console.error('Failed to update task due date:', error);
+        console.error('Request details:', {
+          taskId: task.id,
+          date: date,
+          time: time
+        });
         
         // Rollback optimistic update
         setScheduledTasks(prev => {
@@ -233,8 +245,11 @@ function App() {
           target.style.background = '';
         }, 1000);
         
-        // You could show a more user-friendly error message here
-        alert('Failed to schedule task. Please try again.');
+        // More detailed error message
+        const errorMessage = error instanceof TodoistApiError 
+          ? `Failed to schedule task: ${error.message}` 
+          : 'Failed to schedule task. Please try again.';
+        alert(errorMessage);
       }
     }
   };

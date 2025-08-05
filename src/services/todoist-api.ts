@@ -32,8 +32,14 @@ export class TodoistApi {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('Todoist API Error Details:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: url,
+          errorData: errorData
+        });
         throw new TodoistApiError(
-          `API request failed: ${response.statusText}`,
+          `API request failed: ${response.statusText} (${response.status})`,
           response.status,
           errorData
         );

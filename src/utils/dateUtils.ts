@@ -106,6 +106,7 @@ export const calendarSlotToDate = (date: CalendarDate, timeSlot: string): string
   const dateTime = new Date(date.date);
   dateTime.setHours(hour24, minutes || 0, 0, 0);
   
+  // Return in RFC3339 format that Todoist expects
   return dateTime.toISOString();
 };
 

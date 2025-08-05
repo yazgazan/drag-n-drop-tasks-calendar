@@ -18,6 +18,7 @@ export interface TodoistTask {
     datetime?: string;
     timezone?: string;
   };
+  due_datetime?: string; // For updating tasks with specific datetime
   parent_id?: string;
   order: number;
   url: string;
