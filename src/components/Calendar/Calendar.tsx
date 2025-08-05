@@ -82,6 +82,14 @@ const Calendar: React.FC<CalendarProps> = ({
     setCurrentDates(newDates);
   };
 
+  const goToToday = () => {
+    if (viewMode === 'week') {
+      setCurrentDates(getCurrentWeekDates());
+    } else {
+      setCurrentDates(getCurrentMonthDates());
+    }
+  };
+
   const getRangeString = () => {
     if (viewMode === 'week') {
       return getWeekRangeString(currentDates);
@@ -203,6 +211,14 @@ const Calendar: React.FC<CalendarProps> = ({
           <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>
             📅 {getRangeString()}
           </h2>
+          
+          <button 
+            onClick={goToToday}
+            className="calendar-nav-button today-button"
+            style={{ fontSize: '14px', padding: '6px 12px' }}
+          >
+            Today
+          </button>
           
           {onViewModeChange && (
             <div className="view-mode-toggle">
