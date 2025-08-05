@@ -1,5 +1,5 @@
 export interface Task {
-  id: number;
+  id: string;
   title: string;
   description: string;
   priority: 'p1' | 'p2' | 'p3' | 'p4';
@@ -50,6 +50,7 @@ export interface TodoistLabel {
 export interface ScheduledTask extends Task {
   day: string;
   time: string;
+  date?: string; // ISO date string (YYYY-MM-DD) for new date-based system
 }
 
 export interface ScheduledTasks {

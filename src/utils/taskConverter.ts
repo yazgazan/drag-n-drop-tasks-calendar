@@ -10,7 +10,7 @@ export function convertTodoistTaskToTask(todoistTask: TodoistTask): Task {
   };
 
   return {
-    id: parseInt(todoistTask.id),
+    id: todoistTask.id,
     title: todoistTask.content,
     description: todoistTask.description || '',
     priority: priorityMap[todoistTask.priority] || 'p4',

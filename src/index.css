@@ -208,6 +208,28 @@ body {
   transform: scale(1.02);
 }
 
+.time-slot.today {
+  background: #f8f9fa;
+  border-left: 3px solid #2196f3;
+}
+
+.calendar-nav-button {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.calendar-nav-button:hover {
+  background: #f8f9fa;
+  border-color: #d1d1d1;
+  color: #202020;
+}
+
 .scheduled-task {
   position: absolute;
   top: 2px;

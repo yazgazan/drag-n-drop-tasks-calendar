@@ -8,6 +8,7 @@ This document outlines the tasks needed to transform the proof of concept into a
 - [x] Set up proper project structure with src/ directories as per CLAUDE.md
 - [x] Create package.json with build scripts and dependencies
 - [x] Add build process with linting and type checking
+- [x] **Configure build to output single .html file with no external dependencies (inline all CSS/JS)**
 
 ### 🔌 API Integration
 - [x] Implement Todoist API integration with authentication service
@@ -15,21 +16,21 @@ This document outlines the tasks needed to transform the proof of concept into a
 - [x] Implement proper error handling for API failures
 
 ### 📅 Calendar Features
-- [ ] **Replace generic weekdays with actual dates (Mon Jan 6, Tue Jan 7, etc.)**
-- [ ] **Add current week/month display in calendar header**
-- [ ] **Implement date-based calendar logic (current week, proper date calculations)**
-- [ ] Add calendar navigation (arrows for week/month)
+- [x] **Replace generic weekdays with actual dates (Mon Jan 6, Tue Jan 7, etc.)**
+- [x] **Add current week/month display in calendar header**
+- [x] **Implement date-based calendar logic (current week, proper date calculations)**
+- [x] Add calendar navigation (arrows for week/month)
 - [ ] Implement multiple calendar view modes (week/month)
 - [ ] Add task editing functionality (replace placeholder alert)
-- [ ] **Update calendar data structure to use actual dates instead of generic day names**
+- [x] **Update calendar data structure to use actual dates instead of generic day names**
 
 ### 🎯 **CRITICAL - Task Date Updates**
-- [ ] Implement API call to update task due dates when dropped on calendar
-- [ ] Add date/time utilities to convert calendar slots to proper due dates
-- [ ] Handle scheduled task persistence across app reloads
-- [ ] Add error handling for failed task updates
-- [ ] Implement optimistic updates with rollback on API failure
-- [ ] Load existing scheduled tasks from Todoist on app initialization
+- [x] Implement API call to update task due dates when dropped on calendar
+- [x] Add date/time utilities to convert calendar slots to proper due dates
+- [x] Handle scheduled task persistence across app reloads
+- [x] Add error handling for failed task updates
+- [x] Implement optimistic updates with rollback on API failure
+- [x] Load existing scheduled tasks from Todoist on app initialization
 
 ## Medium Priority - Enhanced Functionality
 

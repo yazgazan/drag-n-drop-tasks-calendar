@@ -3,6 +3,7 @@ import { Task, ScheduledTasks, ScheduledTask } from './types/task';
 import { TodoistApi, TodoistApiError } from './services/todoist-api';
 import { AuthService } from './services/auth';
 import { convertTodoistTaskToTask } from './utils/taskConverter';
+import { calendarSlotToDate } from './utils/dateUtils';
 import TaskList from './components/TaskList/TaskList';
 import Calendar from './components/Calendar/Calendar';
 import TaskModal from './components/TaskModal/TaskModal';
@@ -30,11 +31,42 @@ function App() {
         setIsAuthenticated(true);
         
         const todoistTasks = await TodoistApi.getTasks();
-        const convertedTasks = todoistTasks
-          .filter(task => !task.due) // Only show unscheduled tasks
+        
+        // Separate unscheduled and scheduled tasks
+        const unscheduledTasks = todoistTasks
+          .filter(task => !task.due)
+          .map(convertTodoistTaskToTask);
+          
+        const scheduledTasks = todoistTasks
+          .filter(task => task.due && task.due.datetime)
           .map(convertTodoistTaskToTask);
         
-        setTasks(convertedTasks);
+        // Convert scheduled tasks to ScheduledTasks format
+        const scheduledTasksMap: ScheduledTasks = {};
+        scheduledTasks.forEach(task => {
+          const originalTodoistTask = todoistTasks.find(t => t.id === task.id);
+          if (originalTodoistTask?.due?.datetime) {
+            const dueDate = new Date(originalTodoistTask.due.datetime);
+            const dateKey = dueDate.toISOString().split('T')[0];
+            const timeKey = dueDate.toLocaleTimeString('en-US', { 
+              hour: 'numeric', 
+              minute: '2-digit',
+              hour12: true 
+            });
+            
+            const scheduledTask: ScheduledTask = {
+              ...task,
+              day: dueDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(),
+              time: timeKey,
+              date: dateKey
+            };
+            
+            scheduledTasksMap[`${dateKey}-${timeKey}`] = scheduledTask;
+          }
+        });
+        
+        setTasks(unscheduledTasks);
+        setScheduledTasks(scheduledTasksMap);
         setError(null);
       } catch (err) {
         console.error('Failed to load tasks:', err);
@@ -118,7 +150,7 @@ function App() {
     }
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const target = e.target as HTMLElement;
     target.classList.remove('drop-zone-active', 'drop-zone-hover');
@@ -127,14 +159,15 @@ function App() {
       return;
     }
 
-    const day = target.dataset.day;
+    const date = target.dataset.date;
     const time = target.dataset.time;
     const task = draggedTaskRef.current;
 
-    if (task && day && time) {
-      // Check if slot is already occupied
-      const slotKey = `${day}-${time}`;
-      if (scheduledTasks[slotKey]) {
+    if (task && date && time) {
+      // Check if slot is already occupied (support both new and legacy keys)
+      const dateSlotKey = `${date}-${time}`;
+      
+      if (scheduledTasks[dateSlotKey]) {
         // Show feedback that slot is occupied
         target.style.background = '#ffebee';
         setTimeout(() => {
@@ -143,12 +176,66 @@ function App() {
         return;
       }
 
-      // Schedule the task
-      const scheduledTask: ScheduledTask = { ...task, day, time };
-      setScheduledTasks(prev => ({ ...prev, [slotKey]: scheduledTask }));
-      
-      // Remove task from unscheduled tasks
-      setTasks(prev => prev.filter(t => t.id !== task.id));
+      try {
+        // Create CalendarDate object from the date string
+        const calendarDate = {
+          date: new Date(date),
+          dayName: new Date(date).toLocaleDateString('en-US', { weekday: 'long' }),
+          shortDayName: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+          dayNumber: new Date(date).getDate(),
+          monthName: new Date(date).toLocaleDateString('en-US', { month: 'long' }),
+          shortMonthName: new Date(date).toLocaleDateString('en-US', { month: 'short' }),
+          isToday: new Date(date).toDateString() === new Date().toDateString(),
+          isCurrentWeek: true // Simplified for now
+        };
+
+        // Convert to ISO datetime for Todoist API
+        const dueDateTime = calendarSlotToDate(calendarDate, time);
+        
+        // Optimistically schedule the task in UI
+        const scheduledTask: ScheduledTask = { 
+          ...task, 
+          day: calendarDate.dayName.toLowerCase(), 
+          time,
+          date: date
+        };
+        setScheduledTasks(prev => ({ ...prev, [dateSlotKey]: scheduledTask }));
+        
+        // Remove task from unscheduled tasks
+        setTasks(prev => prev.filter(t => t.id !== task.id));
+
+        // Update task in Todoist API
+        await TodoistApi.updateTask(task.id, {
+          due: {
+            date: date,
+            datetime: dueDateTime
+          }
+        });
+
+        console.log(`Task "${task.title}" scheduled for ${dueDateTime}`);
+
+      } catch (error) {
+        console.error('Failed to update task due date:', error);
+        
+        // Rollback optimistic update
+        setScheduledTasks(prev => {
+          const newScheduled = { ...prev };
+          delete newScheduled[dateSlotKey];
+          return newScheduled;
+        });
+        
+        // Add task back to unscheduled tasks
+        setTasks(prev => [...prev, task]);
+        
+        // Show error feedback
+        target.style.background = '#ffebee';
+        setTimeout(() => {
+          target.style.background = '';
+        }, 1000);
+        
+        // You could show a more user-friendly error message here
+        alert('Failed to schedule task. Please try again.');
+      }
     }
   };
 
@@ -162,28 +249,43 @@ function App() {
     setModalTask(null);
   };
 
-  const handleRemoveTask = () => {
+  const handleRemoveTask = async () => {
     if (modalTask) {
-      const slotKey = `${modalTask.day}-${modalTask.time}`;
+      const slotKey = modalTask.date ? `${modalTask.date}-${modalTask.time}` : `${modalTask.day}-${modalTask.time}`;
       
-      // Remove from scheduled tasks
-      setScheduledTasks(prev => {
-        const newScheduled = { ...prev };
-        delete newScheduled[slotKey];
-        return newScheduled;
-      });
-      
-      // Add back to unscheduled tasks
-      const originalTask: Task = {
-        id: modalTask.id,
-        title: modalTask.title,
-        description: modalTask.description,
-        priority: modalTask.priority,
-        labels: modalTask.labels
-      };
-      setTasks(prev => [...prev, originalTask]);
-      
-      handleCloseModal();
+      try {
+        // Optimistically remove from scheduled tasks
+        setScheduledTasks(prev => {
+          const newScheduled = { ...prev };
+          delete newScheduled[slotKey];
+          return newScheduled;
+        });
+        
+        // Add back to unscheduled tasks
+        const originalTask: Task = {
+          id: modalTask.id,
+          title: modalTask.title,
+          description: modalTask.description,
+          priority: modalTask.priority,
+          labels: modalTask.labels
+        };
+        setTasks(prev => [...prev, originalTask]);
+        
+        // Clear due date in Todoist API
+        await TodoistApi.clearTaskDueDate(modalTask.id);
+        
+        console.log(`Task "${modalTask.title}" unscheduled`);
+        handleCloseModal();
+        
+      } catch (error) {
+        console.error('Failed to unschedule task:', error);
+        
+        // Rollback optimistic update
+        setScheduledTasks(prev => ({ ...prev, [slotKey]: modalTask }));
+        setTasks(prev => prev.filter(t => t.id !== modalTask.id));
+        
+        alert('Failed to unschedule task. Please try again.');
+      }
     }
   };
 

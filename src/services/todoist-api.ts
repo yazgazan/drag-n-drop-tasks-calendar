@@ -74,6 +74,14 @@ export class TodoistApi {
     });
   }
 
+  static async clearTaskDueDate(taskId: string): Promise<TodoistTask> {
+    // According to Todoist API docs, sending an empty string for due_string clears the due date
+    return this.makeRequest<TodoistTask>(`/tasks/${taskId}`, {
+      method: 'POST',
+      body: JSON.stringify({ due_string: '' }),
+    });
+  }
+
   static async deleteTask(taskId: string): Promise<void> {
     return this.makeRequest<void>(`/tasks/${taskId}`, {
       method: 'DELETE',
