@@ -714,6 +714,18 @@ body {
   color: #202020;
 }
 
+.month-day.other-month {
+  background: #fafafa;
+}
+
+.month-day.other-month .month-day-number {
+  color: #999;
+}
+
+.month-day.other-month:hover {
+  background: #f5f5f5;
+}
+
 .month-day-tasks {
   display: flex;
   flex-direction: column;

@@ -11,6 +11,7 @@ export interface CalendarDate {
   shortMonthName: string;
   isToday: boolean;
   isCurrentWeek: boolean;
+  isCurrentMonth?: boolean;
 }
 
 /**
@@ -172,6 +173,10 @@ export const getCurrentMonthDates = (baseDate: Date = new Date()): CalendarDate[
   const currentWeekStart = getStartOfWeek(today);
   const currentWeekEnd = getEndOfWeek(today);
   
+  // Get the target month and year for comparison
+  const targetMonth = baseDate.getMonth();
+  const targetYear = baseDate.getFullYear();
+  
   // Get the Monday of the week containing the first day of the month
   const calendarStart = getStartOfWeek(startOfMonth);
   
@@ -189,6 +194,7 @@ export const getCurrentMonthDates = (baseDate: Date = new Date()): CalendarDate[
     
     const isToday = date.toDateString() === today.toDateString();
     const isCurrentWeek = date >= currentWeekStart && date <= currentWeekEnd;
+    const isCurrentMonth = date.getMonth() === targetMonth && date.getFullYear() === targetYear;
     
     monthDates.push({
       date,
@@ -198,7 +204,8 @@ export const getCurrentMonthDates = (baseDate: Date = new Date()): CalendarDate[
       monthName: date.toLocaleDateString('en-US', { month: 'long' }),
       shortMonthName: date.toLocaleDateString('en-US', { month: 'short' }),
       isToday,
-      isCurrentWeek
+      isCurrentWeek,
+      isCurrentMonth
     });
   }
   

@@ -160,7 +160,7 @@ const Calendar: React.FC<CalendarProps> = ({
                 return (
                   <div
                     key={date.date.toISOString()}
-                    className={`month-day ${date.isToday ? 'today' : ''}`}
+                    className={`month-day ${date.isToday ? 'today' : ''} ${!date.isCurrentMonth ? 'other-month' : ''}`}
                     data-date={getDateKey(date.date)}
                     data-time="9:00 AM"
                     onDragOver={onDragOver}
