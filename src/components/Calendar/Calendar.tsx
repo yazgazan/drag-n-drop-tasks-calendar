@@ -187,8 +187,8 @@ const Calendar: React.FC<CalendarProps> = ({
   };
 
   return (
-    <div className="calendar-container">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+    <div className={`calendar-container calendar-${viewMode}-view`}>
+      <div className="calendar-nav-header">
         <button 
           onClick={() => navigate('prev')}
           className="calendar-nav-button"

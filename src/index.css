@@ -111,6 +111,20 @@ body {
   background: white;
   padding: 20px;
   overflow-y: auto;
+  position: relative;
+}
+
+.calendar-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -20px -20px 0px -20px; /* Extend to container edges, no bottom margin */
+  position: sticky;
+  top: -20px; /* Account for container padding */
+  background: white;
+  z-index: 102; /* Higher than day headers */
+  padding: 30px 20px 15px 20px; /* Padding without bottom margin gap */
+  border-bottom: 1px solid #e8e8e8;
 }
 
 .calendar-controls {
@@ -161,8 +175,18 @@ body {
   display: grid;
   grid-template-columns: 80px repeat(7, 1fr);
   gap: 1px;
-  margin-bottom: 1px;
+  margin-bottom: 0; /* Remove gap */
   background: #e8e8e8;
+}
+
+/* Sticky header only for week view */
+.calendar-week-view .calendar-header {
+  position: sticky;
+  top: 65px; /* Position with proper spacing below nav header */
+  z-index: 101; /* Above calendar content but below nav header */
+  margin: 0 -20px 0 -20px; /* Extend to edges with NO bottom margin */
+  padding: 0 20px;
+  background: #e8e8e8; /* Ensure background covers any gaps */
 }
 
 .calendar-header > div {
@@ -187,6 +211,12 @@ body {
   grid-template-columns: 80px repeat(7, 1fr);
   gap: 1px;
   background: #e8e8e8;
+}
+
+/* Ensure calendar grid extends to container edges in week view */
+.calendar-week-view .calendar-grid {
+  margin: 0 -20px 0 -20px; /* No top margin for seamless connection */
+  padding: 0 20px;
 }
 
 .time-slot {
