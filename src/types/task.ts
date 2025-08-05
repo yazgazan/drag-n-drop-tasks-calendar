@@ -57,7 +57,7 @@ export interface ScheduledTask extends Task {
 }
 
 export interface ScheduledTasks {
-  [key: string]: ScheduledTask;
+  [key: string]: ScheduledTask[];
 }
 
 export interface ModalTaskData {

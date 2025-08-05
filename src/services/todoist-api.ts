@@ -250,8 +250,7 @@ export class TodoistApi {
       priority: 1,
       order: 0,
       url: '',
-      created_at: new Date().toISOString(),
-      due: null
+      created_at: new Date().toISOString()
     } as TodoistTask;
   }
 

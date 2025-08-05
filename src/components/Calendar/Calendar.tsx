@@ -53,11 +53,11 @@ const Calendar: React.FC<CalendarProps> = ({
     }
   }, [viewMode]);
 
-  const getScheduledTask = (date: CalendarDate, time: string): ScheduledTaskType | undefined => {
+  const getScheduledTasks = (date: CalendarDate, time: string): ScheduledTaskType[] => {
     // Use consistent date key to avoid timezone issues
     const dateKey = `${getDateKey(date.date)}-${time}`;
     const legacyKey = `${date.dayName.toLowerCase()}-${time}`;
-    return scheduledTasks[dateKey] || scheduledTasks[legacyKey];
+    return scheduledTasks[dateKey] || scheduledTasks[legacyKey] || [];
   };
 
   const navigate = (direction: 'prev' | 'next') => {
@@ -108,11 +108,11 @@ const Calendar: React.FC<CalendarProps> = ({
         <React.Fragment key={time}>
           <div className="time-slot time-label">{time}</div>
           {currentDates.map((date) => {
-            const scheduledTask = getScheduledTask(date, time);
+            const scheduledTasks = getScheduledTasks(date, time);
             return (
               <div
                 key={`${date.date.toISOString()}-${time}`}
-                className={`time-slot ${date.isToday ? 'today' : ''}`}
+                className={`time-slot ${date.isToday ? 'today' : ''} ${scheduledTasks.length > 0 ? 'has-tasks' : ''}`}
                 data-date={getDateKey(date.date)}
                 data-time={time}
                 onDragOver={onDragOver}
@@ -120,14 +120,17 @@ const Calendar: React.FC<CalendarProps> = ({
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
               >
-                {scheduledTask && (
-                  <ScheduledTask
-                    task={scheduledTask}
-                    onClick={onTaskClick}
-                    onDragStart={onScheduledTaskDragStart}
-                    onDragEnd={onScheduledTaskDragEnd}
-                  />
-                )}
+                <div className="scheduled-tasks-container">
+                  {scheduledTasks.map((task, index) => (
+                    <ScheduledTask
+                      key={`${task.id}-${index}`}
+                      task={task}
+                      onClick={onTaskClick}
+                      onDragStart={onScheduledTaskDragStart}
+                      onDragEnd={onScheduledTaskDragEnd}
+                    />
+                  ))}
+                </div>
               </div>
             );
           })}
@@ -154,8 +157,7 @@ const Calendar: React.FC<CalendarProps> = ({
             <div key={weekIndex} className="month-week">
               {week.map((date) => {
                 const dayTasks = timeSlots
-                  .map(time => getScheduledTask(date, time))
-                  .filter(Boolean);
+                  .flatMap(time => getScheduledTasks(date, time));
                 
                 return (
                   <div
@@ -170,17 +172,17 @@ const Calendar: React.FC<CalendarProps> = ({
                   >
                     <div className="month-day-number">{date.dayNumber}</div>
                     <div className="month-day-tasks">
-                      {dayTasks.slice(0, 3).map((task) => (
+                      {dayTasks.slice(0, 3).map((task, index) => (
                         <div
-                          key={task!.id}
+                          key={`${task.id}-${index}`}
                           className="month-task"
                           draggable={true}
-                          onClick={() => onTaskClick(task!)}
-                          onDragStart={(e) => onScheduledTaskDragStart?.(e, task!)}
+                          onClick={() => onTaskClick(task)}
+                          onDragStart={(e) => onScheduledTaskDragStart?.(e, task)}
                           onDragEnd={onScheduledTaskDragEnd}
-                          style={{ backgroundColor: task!.priority === 'p1' ? '#ff6b6b' : task!.priority === 'p2' ? '#ffa500' : '#4ecdc4' }}
+                          style={{ backgroundColor: task.priority === 'p1' ? '#ff6b6b' : task.priority === 'p2' ? '#ffa500' : '#4ecdc4' }}
                         >
-                          {task!.title.length > 20 ? task!.title.substring(0, 20) + '...' : task!.title}
+                          {task.title.length > 20 ? task.title.substring(0, 20) + '...' : task.title}
                         </div>
                       ))}
                       {dayTasks.length > 3 && (

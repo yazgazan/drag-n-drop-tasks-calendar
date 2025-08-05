@@ -101,7 +101,11 @@ function App() {
               
               const slotKey = `${dateKey}-${timeKey}`;
               console.log('Adding scheduled task to slot:', slotKey, 'for task:', task.title);
-              scheduledTasksMap[slotKey] = scheduledTask;
+              
+              if (!scheduledTasksMap[slotKey]) {
+                scheduledTasksMap[slotKey] = [];
+              }
+              scheduledTasksMap[slotKey].push(scheduledTask);
               
             } catch (error) {
               console.error('Error processing due date for task:', task.title, error);
@@ -277,7 +281,12 @@ function App() {
       // Remove from old slot
       setScheduledTasks(prev => {
         const newScheduled = { ...prev };
-        delete newScheduled[oldSlotKey];
+        if (newScheduled[oldSlotKey]) {
+          newScheduled[oldSlotKey] = newScheduled[oldSlotKey].filter(task => task.id !== draggedScheduledTask.id);
+          if (newScheduled[oldSlotKey].length === 0) {
+            delete newScheduled[oldSlotKey];
+          }
+        }
         return newScheduled;
       });
     }
@@ -294,31 +303,8 @@ function App() {
     };
 
     if (taskToSchedule && date && time) {
-      // Check if slot is already occupied (support both new and legacy keys)
+      // Multiple tasks can now be scheduled in the same slot
       const dateSlotKey = `${date}-${time}`;
-      
-      if (scheduledTasks[dateSlotKey]) {
-        // Check if the occupying task is the same as the one being dragged
-        const occupyingTask = scheduledTasks[dateSlotKey];
-        const isDraggingSameTask = draggedScheduledTask && occupyingTask.id === draggedScheduledTask.id;
-        
-        if (!isDraggingSameTask) {
-          // Restore scheduled task to its original slot if it was moved
-          if (draggedScheduledTask) {
-            const oldSlotKey = draggedScheduledTask.date ? 
-              `${draggedScheduledTask.date}-${draggedScheduledTask.time}` : 
-              `${draggedScheduledTask.day}-${draggedScheduledTask.time}`;
-            setScheduledTasks(prev => ({ ...prev, [oldSlotKey]: draggedScheduledTask }));
-          }
-          
-          // Show feedback that slot is occupied
-          dropTarget.style.background = '#ffebee';
-          setTimeout(() => {
-            dropTarget.style.background = '';
-          }, 500);
-          return;
-        }
-      }
 
       try {
         // Create CalendarDate object from the date string
@@ -352,7 +338,14 @@ function App() {
           time,
           date: date
         };
-        setScheduledTasks(prev => ({ ...prev, [dateSlotKey]: scheduledTask }));
+        setScheduledTasks(prev => {
+          const newScheduled = { ...prev };
+          if (!newScheduled[dateSlotKey]) {
+            newScheduled[dateSlotKey] = [];
+          }
+          newScheduled[dateSlotKey].push(scheduledTask);
+          return newScheduled;
+        });
         
         // Remove task from unscheduled tasks (only if it was an unscheduled task)
         if (draggedTask) {
@@ -380,7 +373,12 @@ function App() {
         // Rollback optimistic update
         setScheduledTasks(prev => {
           const newScheduled = { ...prev };
-          delete newScheduled[dateSlotKey];
+          if (newScheduled[dateSlotKey]) {
+            newScheduled[dateSlotKey] = newScheduled[dateSlotKey].filter(task => task.id !== taskToSchedule.id);
+            if (newScheduled[dateSlotKey].length === 0) {
+              delete newScheduled[dateSlotKey];
+            }
+          }
           return newScheduled;
         });
         
@@ -393,7 +391,14 @@ function App() {
           const oldSlotKey = draggedScheduledTask.date ? 
             `${draggedScheduledTask.date}-${draggedScheduledTask.time}` : 
             `${draggedScheduledTask.day}-${draggedScheduledTask.time}`;
-          setScheduledTasks(prev => ({ ...prev, [oldSlotKey]: draggedScheduledTask }));
+          setScheduledTasks(prev => {
+            const newScheduled = { ...prev };
+            if (!newScheduled[oldSlotKey]) {
+              newScheduled[oldSlotKey] = [];
+            }
+            newScheduled[oldSlotKey].push(draggedScheduledTask);
+            return newScheduled;
+          });
         }
         
         // Show error feedback
@@ -430,7 +435,12 @@ function App() {
       // Optimistically remove from scheduled tasks
       setScheduledTasks(prev => {
         const newScheduled = { ...prev };
-        delete newScheduled[slotKey];
+        if (newScheduled[slotKey]) {
+          newScheduled[slotKey] = newScheduled[slotKey].filter(task => task.id !== scheduledTask.id);
+          if (newScheduled[slotKey].length === 0) {
+            delete newScheduled[slotKey];
+          }
+        }
         return newScheduled;
       });
       
@@ -455,7 +465,14 @@ function App() {
       console.error('Failed to unschedule task:', error);
       
       // Rollback optimistic update
-      setScheduledTasks(prev => ({ ...prev, [slotKey]: scheduledTask }));
+      setScheduledTasks(prev => {
+        const newScheduled = { ...prev };
+        if (!newScheduled[slotKey]) {
+          newScheduled[slotKey] = [];
+        }
+        newScheduled[slotKey].push(scheduledTask);
+        return newScheduled;
+      });
       setTasks(prev => prev.filter(t => t.id !== scheduledTask.id));
       
       // Show error feedback
@@ -498,7 +515,12 @@ function App() {
         // Optimistically remove from scheduled tasks
         setScheduledTasks(prev => {
           const newScheduled = { ...prev };
-          delete newScheduled[slotKey];
+          if (newScheduled[slotKey]) {
+            newScheduled[slotKey] = newScheduled[slotKey].filter(task => task.id !== modalTask.id);
+            if (newScheduled[slotKey].length === 0) {
+              delete newScheduled[slotKey];
+            }
+          }
           return newScheduled;
         });
         
@@ -524,7 +546,14 @@ function App() {
         console.error('Failed to unschedule task:', error);
         
         // Rollback optimistic update
-        setScheduledTasks(prev => ({ ...prev, [slotKey]: modalTask }));
+        setScheduledTasks(prev => {
+          const newScheduled = { ...prev };
+          if (!newScheduled[slotKey]) {
+            newScheduled[slotKey] = [];
+          }
+          newScheduled[slotKey].push(modalTask);
+          return newScheduled;
+        });
         setTasks(prev => prev.filter(t => t.id !== modalTask.id));
         
         alert('Failed to unschedule task. Please try again.');
@@ -576,10 +605,15 @@ function App() {
           ...updatedTaskData
         };
 
-        setScheduledTasks(prev => ({
-          ...prev,
-          [slotKey]: updatedTask
-        }));
+        setScheduledTasks(prev => {
+          const newScheduled = { ...prev };
+          if (newScheduled[slotKey]) {
+            newScheduled[slotKey] = newScheduled[slotKey].map(task => 
+              task.id === editingTask.id ? updatedTask : task
+            );
+          }
+          return newScheduled;
+        });
       } else {
         // Update unscheduled task
         const updatedTask: Task = {
