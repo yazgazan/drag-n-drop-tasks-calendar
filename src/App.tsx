@@ -488,6 +488,7 @@ function App() {
   const handleSaveTask = async (updatedTaskData: Partial<ScheduledTask>) => {
     if (!editingTask) return;
 
+    const isScheduledTask = editingTask.date && editingTask.time;
     const slotKey = editingTask.date ? 
       `${editingTask.date}-${editingTask.time}` : 
       `${editingTask.day}-${editingTask.time}`;
@@ -512,18 +513,36 @@ function App() {
         labels: todoistTaskData.labels
       });
 
-      // Update local state
-      const updatedTask: ScheduledTask = {
-        ...editingTask,
-        ...updatedTaskData
-      };
+      // Update local state based on whether task is scheduled or unscheduled
+      if (isScheduledTask) {
+        // Update scheduled task
+        const updatedTask: ScheduledTask = {
+          ...editingTask,
+          ...updatedTaskData
+        };
 
-      setScheduledTasks(prev => ({
-        ...prev,
-        [slotKey]: updatedTask
-      }));
+        setScheduledTasks(prev => ({
+          ...prev,
+          [slotKey]: updatedTask
+        }));
+      } else {
+        // Update unscheduled task
+        const updatedTask: Task = {
+          id: editingTask.id,
+          title: updatedTaskData.title || editingTask.title,
+          description: updatedTaskData.description || editingTask.description,
+          priority: updatedTaskData.priority || editingTask.priority,
+          labels: updatedTaskData.labels || editingTask.labels,
+          project_id: editingTask.project_id,
+          project_name: editingTask.project_name
+        };
 
-      console.log(`Task "${updatedTask.title}" updated successfully`);
+        setTasks(prev => prev.map(task => 
+          task.id === editingTask.id ? updatedTask : task
+        ));
+      }
+
+      console.log(`Task "${updatedTaskData.title || editingTask.title}" updated successfully`);
 
     } catch (error) {
       console.error('Failed to update task:', error);
