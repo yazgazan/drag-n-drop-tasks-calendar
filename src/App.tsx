@@ -35,16 +35,19 @@ function App() {
 
         setIsAuthenticated(true);
         
-        const todoistTasks = await TodoistApi.getTasks();
+        const [todoistTasks, projects] = await Promise.all([
+          TodoistApi.getTasks(),
+          TodoistApi.getProjects()
+        ]);
         
         // Separate unscheduled and scheduled tasks
         const unscheduledTasks = todoistTasks
           .filter(task => !task.due)
-          .map(convertTodoistTaskToTask);
+          .map(task => convertTodoistTaskToTask(task, projects));
           
         const scheduledTasks = todoistTasks
           .filter(task => task.due && task.due.datetime)
-          .map(convertTodoistTaskToTask);
+          .map(task => convertTodoistTaskToTask(task, projects));
         
         // Convert scheduled tasks to ScheduledTasks format
         const scheduledTasksMap: ScheduledTasks = {};
@@ -246,7 +249,9 @@ function App() {
       title: draggedScheduledTask!.title,
       description: draggedScheduledTask!.description,
       priority: draggedScheduledTask!.priority,
-      labels: draggedScheduledTask!.labels
+      labels: draggedScheduledTask!.labels,
+      project_id: draggedScheduledTask!.project_id,
+      project_name: draggedScheduledTask!.project_name
     };
 
     if (taskToSchedule && date && time) {
@@ -380,7 +385,9 @@ function App() {
         title: scheduledTask.title,
         description: scheduledTask.description,
         priority: scheduledTask.priority,
-        labels: scheduledTask.labels
+        labels: scheduledTask.labels,
+        project_id: scheduledTask.project_id,
+        project_name: scheduledTask.project_name
       };
       setTasks(prev => [...prev, originalTask]);
       
@@ -434,7 +441,9 @@ function App() {
           title: modalTask.title,
           description: modalTask.description,
           priority: modalTask.priority,
-          labels: modalTask.labels
+          labels: modalTask.labels,
+          project_id: modalTask.project_id,
+          project_name: modalTask.project_name
         };
         setTasks(prev => [...prev, originalTask]);
         

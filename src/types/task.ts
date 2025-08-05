@@ -4,6 +4,8 @@ export interface Task {
   description: string;
   priority: 'p1' | 'p2' | 'p3' | 'p4';
   labels: string[];
+  project_id?: string;
+  project_name?: string;
 }
 
 export interface TodoistTask {
