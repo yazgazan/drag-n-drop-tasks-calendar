@@ -156,7 +156,6 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({ isOpen, task, onClose, on
                     onChange={() => setPriority(p)}
                   />
                   <span className={`priority-label priority-${p}`}>
-                    <div className={`priority-dot priority-${p}`}></div>
                     {priorityLabels[p]}
                   </span>
                 </label>
