@@ -342,7 +342,7 @@ export class TodoistApi {
     return response.labels || [];
   }
 
-  static async createProject(project: { name: string; color?: string; parent_id?: string }): Promise<TodoistProject> {
+  static async createProject(project: { name: string; parent_id?: string }): Promise<TodoistProject> {
     const tempId = `temp_project_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const command: Command = {
       type: 'project_add',
@@ -350,7 +350,7 @@ export class TodoistApi {
       temp_id: tempId,
       args: {
         name: project.name,
-        color: project.color || 'grey',
+        color: 'grey',
         parent_id: project.parent_id
       }
     };
@@ -385,7 +385,7 @@ export class TodoistApi {
         name: project.name,
         comment_count: 0,
         order: 0,
-        color: project.color || 'grey',
+        color: 'grey',
         is_shared: false,
         is_favorite: false,
         is_inbox_project: false,
@@ -404,7 +404,7 @@ export class TodoistApi {
         name: project.name,
         comment_count: 0,
         order: 0,
-        color: project.color || 'grey',
+        color: 'grey',
         is_shared: false,
         is_favorite: false,
         is_inbox_project: false,

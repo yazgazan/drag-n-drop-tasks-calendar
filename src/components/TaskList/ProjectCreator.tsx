@@ -1,24 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 interface ProjectCreatorProps {
-  onCreateProject: (name: string, color?: string) => Promise<void>;
+  onCreateProject: (name: string) => Promise<void>;
 }
 
-const PROJECT_COLORS = [
-  { name: 'grey', label: 'Grey' },
-  { name: 'red', label: 'Red' },
-  { name: 'orange', label: 'Orange' },
-  { name: 'yellow', label: 'Yellow' },
-  { name: 'green', label: 'Green' },
-  { name: 'blue', label: 'Blue' },
-  { name: 'purple', label: 'Purple' },
-  { name: 'pink', label: 'Pink' }
-];
 
 const ProjectCreator: React.FC<ProjectCreatorProps> = ({ onCreateProject }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [projectName, setProjectName] = useState('');
-  const [selectedColor, setSelectedColor] = useState('grey');
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -31,7 +20,6 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({ onCreateProject }) => {
   const handleStartCreate = () => {
     setIsCreating(true);
     setProjectName('');
-    setSelectedColor('grey');
   };
 
   const handleCreate = async () => {
@@ -41,10 +29,9 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({ onCreateProject }) => {
 
     setIsLoading(true);
     try {
-      await onCreateProject(projectName.trim(), selectedColor);
+      await onCreateProject(projectName.trim());
       setIsCreating(false);
       setProjectName('');
-      setSelectedColor('grey');
     } catch (error) {
       console.error('Failed to create project:', error);
       alert('Failed to create project. Please try again.');
@@ -56,7 +43,6 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({ onCreateProject }) => {
   const handleCancel = () => {
     setIsCreating(false);
     setProjectName('');
-    setSelectedColor('grey');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -81,17 +67,6 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({ onCreateProject }) => {
             className="project-name-input"
             disabled={isLoading}
           />
-          <div className="color-selector">
-            {PROJECT_COLORS.map((color) => (
-              <button
-                key={color.name}
-                className={`color-option color-${color.name} ${selectedColor === color.name ? 'selected' : ''}`}
-                onClick={() => setSelectedColor(color.name)}
-                title={color.label}
-                disabled={isLoading}
-              />
-            ))}
-          </div>
           <div className="creator-actions">
             <button
               className="save-btn"

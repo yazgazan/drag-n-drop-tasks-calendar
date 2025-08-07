@@ -801,10 +801,10 @@ function App() {
     setEditingTask(null);
   };
 
-  const handleCreateProject = async (name: string, color?: string): Promise<void> => {
+  const handleCreateProject = async (name: string): Promise<void> => {
     try {
-      console.log(`Creating project: ${name} with color: ${color}`);
-      const newProject = await TodoistApi.createProject({ name, color });
+      console.log(`Creating project: ${name}`);
+      const newProject = await TodoistApi.createProject({ name });
       
       setProjects(prev => [...prev, newProject]);
       console.log(`Project "${name}" created successfully`);

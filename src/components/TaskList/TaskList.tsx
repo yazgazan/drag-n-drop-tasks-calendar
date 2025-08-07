@@ -15,7 +15,7 @@ interface TaskListProps {
   onDrop?: (e: React.DragEvent<HTMLDivElement>) => void;
   onTaskClick?: (task: Task) => void;
   onCreateTask?: (projectName: string) => void;
-  onCreateProject?: (name: string, color?: string) => Promise<void>;
+  onCreateProject?: (name: string) => Promise<void>;
   onRenameProject?: (projectId: string, newName: string) => Promise<void>;
 }
 
