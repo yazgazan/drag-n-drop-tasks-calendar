@@ -12,7 +12,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deploy": "npm run build && gh-pages -d dist"
   },
   "keywords": [
     "todoist",
@@ -46,6 +47,7 @@
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
     "vite-plugin-singlefile": "^2.3.0",
-    "vitest": "^1.0.4"
+    "vitest": "^1.0.4",
+    "gh-pages": "^6.1.1"
   }
 }
