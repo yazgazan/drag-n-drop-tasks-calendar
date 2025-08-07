@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScheduledTasks, ScheduledTask as ScheduledTaskType } from '../../types/task';
 import { timeSlots } from '../../constants/calendar';
 import ScheduledTask from './ScheduledTask';
+import MonthTask from './MonthTask';
 import { 
   getCurrentWeekDates, 
   getWeekRangeString, 
@@ -173,17 +174,14 @@ const Calendar: React.FC<CalendarProps> = ({
                     <div className="month-day-number">{date.dayNumber}</div>
                     <div className="month-day-tasks">
                       {dayTasks.slice(0, 3).map((task, index) => (
-                        <div
+                        <MonthTask
                           key={`${task.id}-${index}`}
-                          className="month-task"
-                          draggable={true}
-                          onClick={() => onTaskClick(task)}
-                          onDragStart={(e) => onScheduledTaskDragStart?.(e, task)}
+                          task={task}
+                          onClick={onTaskClick}
+                          onDragStart={onScheduledTaskDragStart}
                           onDragEnd={onScheduledTaskDragEnd}
                           style={{ backgroundColor: task.priority === 'p1' ? '#ff6b6b' : task.priority === 'p2' ? '#ffa500' : '#4ecdc4' }}
-                        >
-                          {task.title.length > 20 ? task.title.substring(0, 20) + '...' : task.title}
-                        </div>
+                        />
                       ))}
                       {dayTasks.length > 3 && (
                         <div className="month-task-more">+{dayTasks.length - 3} more</div>

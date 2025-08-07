@@ -166,10 +166,47 @@ function App() {
           draggedScheduledTaskRef.current = null;
         }
         
-        // Trigger a synthetic drop event for the existing handlers
-        const syntheticEvent = new Event('drop', { bubbles: true, cancelable: true });
-        Object.defineProperty(syntheticEvent, 'target', { value: dropTarget });
-        dropTarget.dispatchEvent(syntheticEvent);
+        // Create a proper synthetic React DragEvent for the drop handler
+        const syntheticEvent = {
+          preventDefault: () => {},
+          stopPropagation: () => {},
+          target: dropTarget,
+          currentTarget: dropTarget,
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: {
+            dropEffect: 'move' as const,
+            effectAllowed: 'move' as const,
+            setData: () => {},
+            getData: () => '',
+            files: [] as any,
+            items: [] as any,
+            types: [] as string[]
+          },
+          // Add missing event properties to satisfy TypeScript
+          altKey: false,
+          button: 0,
+          buttons: 0,
+          clientX: 0,
+          clientY: 0,
+          ctrlKey: false,
+          metaKey: false,
+          shiftKey: false,
+          detail: 0,
+          pageX: 0,
+          pageY: 0,
+          screenX: 0,
+          screenY: 0,
+          timeStamp: Date.now(),
+          type: 'drop',
+          nativeEvent: {} as any,
+          isDefaultPrevented: () => false,
+          isPropagationStopped: () => false,
+          persist: () => {}
+        } as unknown as React.DragEvent<HTMLDivElement>;
+        
+        // Call the drop handler directly instead of dispatching an event
+        handleDrop(syntheticEvent);
       }
     });
   }, []);
