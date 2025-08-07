@@ -12,6 +12,7 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({ isOpen, task, onClose, on
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'p1' | 'p2' | 'p3' | 'p4'>('p4');
+  const [prioritySliderValue, setPrioritySliderValue] = useState(4);
   const [labels, setLabels] = useState<string[]>([]);
   const [newLabel, setNewLabel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -21,6 +22,13 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({ isOpen, task, onClose, on
       setTitle(task.title);
       setDescription(task.description || '');
       setPriority(task.priority);
+      const priorityToSliderMap: { [key: string]: number } = {
+        'p1': 1,
+        'p2': 2,
+        'p3': 3,
+        'p4': 4
+      };
+      setPrioritySliderValue(priorityToSliderMap[task.priority]);
       setLabels([...task.labels]);
     }
   }, [task]);
@@ -102,6 +110,17 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({ isOpen, task, onClose, on
 
   const priorityOptions: ('p1' | 'p2' | 'p3' | 'p4')[] = ['p1', 'p2', 'p3', 'p4'];
 
+  const handlePrioritySliderChange = (value: number) => {
+    setPrioritySliderValue(value);
+    const priorityMap: { [key: number]: 'p1' | 'p2' | 'p3' | 'p4' } = {
+      1: 'p1',
+      2: 'p2', 
+      3: 'p3',
+      4: 'p4'
+    };
+    setPriority(priorityMap[value]);
+  };
+
   return (
     <div 
       className={`modal-overlay ${isOpen ? 'active' : ''}`}
@@ -145,21 +164,25 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({ isOpen, task, onClose, on
 
           <div className="form-group">
             <label className="form-label">Priority</label>
-            <div className="priority-options">
-              {priorityOptions.map((p) => (
-                <label key={p} className="priority-option">
-                  <input
-                    type="radio"
-                    name="priority"
-                    value={p}
-                    checked={priority === p}
-                    onChange={() => setPriority(p)}
-                  />
-                  <span className={`priority-label priority-${p}`}>
-                    {priorityLabels[p]}
-                  </span>
-                </label>
-              ))}
+            <div className="priority-slider-container">
+              <div className="priority-slider-labels">
+                <span className="priority-label-start">Low</span>
+                <span className="priority-label-end">Urgent</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="4"
+                step="1"
+                value={5 - prioritySliderValue}
+                onChange={(e) => handlePrioritySliderChange(5 - parseInt(e.target.value))}
+                className="priority-slider"
+              />
+              <div className="priority-current">
+                <span className={`priority-label priority-${priority}`}>
+                  {priorityLabels[priority]}
+                </span>
+              </div>
             </div>
           </div>
 
