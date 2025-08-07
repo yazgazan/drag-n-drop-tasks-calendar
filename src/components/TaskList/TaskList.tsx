@@ -58,10 +58,21 @@ const TaskList: React.FC<TaskListProps> = ({
     }
   });
 
-  // Sort project names, putting Inbox first
+  // Sort project names: Inbox first, then projects with tasks, then projects without tasks
   const sortedProjectNames = Array.from(allProjectNames).sort((a, b) => {
+    // Always put Inbox first
     if (a === 'Inbox') return -1;
     if (b === 'Inbox') return 1;
+    
+    // Check if projects have unscheduled tasks
+    const aHasTasks = groupedTasks[a]?.length > 0;
+    const bHasTasks = groupedTasks[b]?.length > 0;
+    
+    // If one has tasks and the other doesn't, prioritize the one with tasks
+    if (aHasTasks && !bHasTasks) return -1;
+    if (!aHasTasks && bHasTasks) return 1;
+    
+    // If both have tasks or both don't have tasks, sort alphabetically
     return a.localeCompare(b);
   });
 
