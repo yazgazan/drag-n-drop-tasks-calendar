@@ -4,7 +4,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
 
 export default defineConfig({
   plugins: [react(), viteSingleFile()],
-  base: '/drag-n-drop-tasks-calendar/',
+  base: '/drag-n-drop-tasks/',
   resolve: {
     alias: {
       '@': '/src',
