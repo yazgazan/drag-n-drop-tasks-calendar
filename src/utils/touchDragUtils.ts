@@ -34,14 +34,11 @@ class TouchDragManager {
   }
 
   handleTouchStart = (e: TouchEvent, task: Task | ScheduledTask, element: HTMLElement) => {
-    // Prevent default to avoid scrolling and text selection
-    e.preventDefault();
-    
     const touch = e.touches[0];
     const rect = element.getBoundingClientRect();
     
     this.state = {
-      isDragging: true,
+      isDragging: false, // Don't start dragging immediately
       draggedElement: element,
       draggedTask: task,
       ghostElement: null,
@@ -51,51 +48,84 @@ class TouchDragManager {
       offsetY: touch.clientY - rect.top,
     };
 
-    // Create ghost element
-    this.createGhostElement(element, touch.clientX, touch.clientY);
-    
-    // Add visual feedback to original element
-    element.style.opacity = '0.5';
-    element.classList.add('dragging');
-    
-    // Add global touch listeners
+    // Add global touch listeners to detect movement
     document.addEventListener('touchmove', this.handleTouchMove, { passive: false });
     document.addEventListener('touchend', this.handleTouchEnd, { passive: false });
-    
-    this.callbacks.onDragStart?.(task, element);
   };
 
   private handleTouchMove = (e: TouchEvent) => {
-    if (!this.state.isDragging || !this.state.ghostElement) return;
-    
-    e.preventDefault();
     const touch = e.touches[0];
+    const deltaX = touch.clientX - this.state.startX;
+    const deltaY = touch.clientY - this.state.startY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     
-    // Update ghost element position
-    this.state.ghostElement.style.left = `${touch.clientX - this.state.offsetX}px`;
-    this.state.ghostElement.style.top = `${touch.clientY - this.state.offsetY}px`;
+    // Only start dragging if moved more than threshold (10px)
+    if (!this.state.isDragging && distance > 10) {
+      // Now we're actually starting to drag
+      e.preventDefault();
+      this.state.isDragging = true;
+      
+      // Create ghost element
+      this.createGhostElement(this.state.draggedElement!, touch.clientX, touch.clientY);
+      
+      // Add visual feedback to original element
+      if (this.state.draggedElement) {
+        this.state.draggedElement.style.opacity = '0.5';
+        this.state.draggedElement.classList.add('dragging');
+      }
+      
+      this.callbacks.onDragStart?.(this.state.draggedTask!, this.state.draggedElement!);
+    }
     
-    // Highlight potential drop targets
-    this.updateDropTargets(touch.clientX, touch.clientY);
-    
-    this.callbacks.onDragMove?.(touch.clientX, touch.clientY, this.state.draggedTask!);
+    if (this.state.isDragging && this.state.ghostElement) {
+      e.preventDefault();
+      
+      // Update ghost element position
+      this.state.ghostElement.style.left = `${touch.clientX - this.state.offsetX}px`;
+      this.state.ghostElement.style.top = `${touch.clientY - this.state.offsetY}px`;
+      
+      // Highlight potential drop targets
+      this.updateDropTargets(touch.clientX, touch.clientY);
+      
+      this.callbacks.onDragMove?.(touch.clientX, touch.clientY, this.state.draggedTask!);
+    }
   };
 
   private handleTouchEnd = (e: TouchEvent) => {
-    if (!this.state.isDragging) return;
+    const wasDragging = this.state.isDragging;
+    
+    // Remove global listeners first
+    document.removeEventListener('touchmove', this.handleTouchMove);
+    document.removeEventListener('touchend', this.handleTouchEnd);
+    
+    if (!wasDragging) {
+      // This was just a tap, reset state and allow normal click behavior
+      this.state = {
+        isDragging: false,
+        draggedElement: null,
+        draggedTask: null,
+        ghostElement: null,
+        startX: 0,
+        startY: 0,
+        offsetX: 0,
+        offsetY: 0,
+      };
+      return;
+    }
     
     e.preventDefault();
     const touch = e.changedTouches[0];
     
     // Find drop target
     const dropTarget = this.getDropTarget(touch.clientX, touch.clientY);
+    console.log('Touch drag end:', {
+      task: this.state.draggedTask?.title,
+      dropTarget: dropTarget?.className,
+      coordinates: { x: touch.clientX, y: touch.clientY }
+    });
     
     // Clean up
     this.cleanup();
-    
-    // Remove global listeners
-    document.removeEventListener('touchmove', this.handleTouchMove);
-    document.removeEventListener('touchend', this.handleTouchEnd);
     
     this.callbacks.onDragEnd?.(this.state.draggedTask!, dropTarget);
   };

@@ -1770,14 +1770,14 @@ body {
   .task-item,
   .scheduled-task,
   .month-task {
-    touch-action: none; /* Prevent scrolling when dragging */
+    touch-action: pan-y; /* Allow vertical scrolling but handle horizontal drag */
     min-height: 44px; /* Minimum touch target size */
   }
   
   .time-slot,
   .month-day,
   .unscheduled-drop-zone {
-    touch-action: none; /* Allow custom touch handling */
+    touch-action: auto; /* Allow normal scrolling on drop targets */
   }
   
   /* Make drag targets more obvious on mobile */

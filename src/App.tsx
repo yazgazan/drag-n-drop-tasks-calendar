@@ -153,6 +153,8 @@ function App() {
     e.preventDefault();
     const target = e.target as HTMLElement;
     
+    console.log('handleDrop called with target:', target?.className);
+    
     // Find the correct drop target (may be a child element)
     const dropTarget = target.closest('.time-slot, .month-day') as HTMLElement;
     
@@ -391,6 +393,7 @@ function App() {
         } as unknown as React.DragEvent<HTMLDivElement>;
         
         // Call the drop handler directly instead of dispatching an event
+        console.log('Calling handleDrop from touch manager with target:', dropTarget?.className);
         handleDrop(syntheticEvent);
       }
     });
