@@ -5,6 +5,7 @@ import { AuthService } from './services/auth';
 import { convertTodoistTaskToTask, convertTaskToTodoistTask } from './utils/taskConverter';
 import { calendarSlotToDate, getDateKey, findOptimalTimeSlot } from './utils/dateUtils';
 import { timeSlots } from './constants/calendar';
+import { touchDragManager } from './utils/touchDragUtils';
 import TaskList from './components/TaskList/TaskList';
 import Calendar, { CalendarViewMode } from './components/Calendar/Calendar';
 import TaskModal from './components/TaskModal/TaskModal';
@@ -146,6 +147,31 @@ function App() {
     };
 
     initializeApp();
+  }, []);
+
+  // Set up touch drag callbacks (must be before conditional returns)
+  useEffect(() => {
+    touchDragManager.setCallbacks({
+      onDragEnd: (task, dropTarget) => {
+        if (!dropTarget) return;
+        
+        // Set the dragged task reference based on task type
+        if ('time' in task) {
+          // It's a scheduled task
+          draggedScheduledTaskRef.current = task as ScheduledTask;
+          draggedTaskRef.current = null;
+        } else {
+          // It's an unscheduled task
+          draggedTaskRef.current = task as Task;
+          draggedScheduledTaskRef.current = null;
+        }
+        
+        // Trigger a synthetic drop event for the existing handlers
+        const syntheticEvent = new Event('drop', { bubbles: true, cancelable: true });
+        Object.defineProperty(syntheticEvent, 'target', { value: dropTarget });
+        dropTarget.dispatchEvent(syntheticEvent);
+      }
+    });
   }, []);
 
   const handleLogin = (token: string) => {

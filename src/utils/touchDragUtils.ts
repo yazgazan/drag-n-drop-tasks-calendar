@@ -1,0 +1,212 @@
+import { Task, ScheduledTask } from '../types/task';
+
+interface TouchDragState {
+  isDragging: boolean;
+  draggedElement: HTMLElement | null;
+  draggedTask: Task | ScheduledTask | null;
+  ghostElement: HTMLElement | null;
+  startX: number;
+  startY: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+class TouchDragManager {
+  private state: TouchDragState = {
+    isDragging: false,
+    draggedElement: null,
+    draggedTask: null,
+    ghostElement: null,
+    startX: 0,
+    startY: 0,
+    offsetX: 0,
+    offsetY: 0,
+  };
+
+  private callbacks: {
+    onDragStart?: (task: Task | ScheduledTask, element: HTMLElement) => void;
+    onDragMove?: (x: number, y: number, task: Task | ScheduledTask) => void;
+    onDragEnd?: (task: Task | ScheduledTask, dropTarget: HTMLElement | null) => void;
+  } = {};
+
+  setCallbacks(callbacks: typeof this.callbacks) {
+    this.callbacks = callbacks;
+  }
+
+  handleTouchStart = (e: TouchEvent, task: Task | ScheduledTask, element: HTMLElement) => {
+    // Prevent default to avoid scrolling and text selection
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    const rect = element.getBoundingClientRect();
+    
+    this.state = {
+      isDragging: true,
+      draggedElement: element,
+      draggedTask: task,
+      ghostElement: null,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      offsetX: touch.clientX - rect.left,
+      offsetY: touch.clientY - rect.top,
+    };
+
+    // Create ghost element
+    this.createGhostElement(element, touch.clientX, touch.clientY);
+    
+    // Add visual feedback to original element
+    element.style.opacity = '0.5';
+    element.classList.add('dragging');
+    
+    // Add global touch listeners
+    document.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+    document.addEventListener('touchend', this.handleTouchEnd, { passive: false });
+    
+    this.callbacks.onDragStart?.(task, element);
+  };
+
+  private handleTouchMove = (e: TouchEvent) => {
+    if (!this.state.isDragging || !this.state.ghostElement) return;
+    
+    e.preventDefault();
+    const touch = e.touches[0];
+    
+    // Update ghost element position
+    this.state.ghostElement.style.left = `${touch.clientX - this.state.offsetX}px`;
+    this.state.ghostElement.style.top = `${touch.clientY - this.state.offsetY}px`;
+    
+    // Highlight potential drop targets
+    this.updateDropTargets(touch.clientX, touch.clientY);
+    
+    this.callbacks.onDragMove?.(touch.clientX, touch.clientY, this.state.draggedTask!);
+  };
+
+  private handleTouchEnd = (e: TouchEvent) => {
+    if (!this.state.isDragging) return;
+    
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    
+    // Find drop target
+    const dropTarget = this.getDropTarget(touch.clientX, touch.clientY);
+    
+    // Clean up
+    this.cleanup();
+    
+    // Remove global listeners
+    document.removeEventListener('touchmove', this.handleTouchMove);
+    document.removeEventListener('touchend', this.handleTouchEnd);
+    
+    this.callbacks.onDragEnd?.(this.state.draggedTask!, dropTarget);
+  };
+
+  private createGhostElement(originalElement: HTMLElement, x: number, y: number) {
+    const ghost = originalElement.cloneNode(true) as HTMLElement;
+    
+    ghost.style.position = 'fixed';
+    ghost.style.left = `${x - this.state.offsetX}px`;
+    ghost.style.top = `${y - this.state.offsetY}px`;
+    ghost.style.width = `${originalElement.offsetWidth}px`;
+    ghost.style.height = `${originalElement.offsetHeight}px`;
+    ghost.style.pointerEvents = 'none';
+    ghost.style.zIndex = '9999';
+    ghost.style.opacity = '0.8';
+    ghost.style.transform = 'rotate(5deg)';
+    ghost.classList.add('touch-ghost');
+    
+    document.body.appendChild(ghost);
+    this.state.ghostElement = ghost;
+  }
+
+  private updateDropTargets(x: number, y: number) {
+    // Remove previous highlight
+    document.querySelectorAll('.touch-drag-over').forEach(el => {
+      el.classList.remove('touch-drag-over');
+    });
+    
+    // Find current drop target and highlight it
+    const dropTarget = this.getDropTarget(x, y);
+    if (dropTarget) {
+      dropTarget.classList.add('touch-drag-over');
+    }
+  }
+
+  private getDropTarget(x: number, y: number): HTMLElement | null {
+    // Temporarily hide ghost to get element underneath
+    const ghost = this.state.ghostElement;
+    if (ghost) ghost.style.display = 'none';
+    
+    const elementBelow = document.elementFromPoint(x, y) as HTMLElement;
+    
+    if (ghost) ghost.style.display = 'block';
+    
+    if (!elementBelow) return null;
+    
+    // Find the actual drop zone (time slot or task list)
+    const dropZone = elementBelow.closest('.time-slot, .month-day, .unscheduled-drop-zone');
+    return dropZone as HTMLElement;
+  }
+
+  private cleanup() {
+    // Remove ghost element
+    if (this.state.ghostElement) {
+      document.body.removeChild(this.state.ghostElement);
+    }
+    
+    // Restore original element
+    if (this.state.draggedElement) {
+      this.state.draggedElement.style.opacity = '';
+      this.state.draggedElement.classList.remove('dragging');
+    }
+    
+    // Remove drop target highlights
+    document.querySelectorAll('.touch-drag-over').forEach(el => {
+      el.classList.remove('touch-drag-over');
+    });
+    
+    // Reset state
+    this.state = {
+      isDragging: false,
+      draggedElement: null,
+      draggedTask: null,
+      ghostElement: null,
+      startX: 0,
+      startY: 0,
+      offsetX: 0,
+      offsetY: 0,
+    };
+  }
+
+  isDragging() {
+    return this.state.isDragging;
+  }
+
+  getCurrentDraggedTask() {
+    return this.state.draggedTask;
+  }
+}
+
+// Create singleton instance
+export const touchDragManager = new TouchDragManager();
+
+// Utility function to add touch drag support to an element
+export function addTouchDragSupport(
+  element: HTMLElement,
+  task: Task | ScheduledTask,
+  callbacks: {
+    onDragStart?: (task: Task | ScheduledTask, element: HTMLElement) => void;
+    onDragEnd?: (task: Task | ScheduledTask, dropTarget: HTMLElement | null) => void;
+  }
+) {
+  const handleTouchStart = (e: TouchEvent) => {
+    touchDragManager.setCallbacks(callbacks);
+    touchDragManager.handleTouchStart(e, task, element);
+  };
+
+  element.addEventListener('touchstart', handleTouchStart, { passive: false });
+  
+  // Return cleanup function
+  return () => {
+    element.removeEventListener('touchstart', handleTouchStart);
+  };
+}

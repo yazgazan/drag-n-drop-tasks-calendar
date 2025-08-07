@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ScheduledTask as ScheduledTaskType } from '../../types/task';
+import { addTouchDragSupport } from '../../utils/touchDragUtils';
 
 interface ScheduledTaskProps {
   task: ScheduledTaskType;
@@ -9,8 +10,41 @@ interface ScheduledTaskProps {
 }
 
 const ScheduledTask: React.FC<ScheduledTaskProps> = ({ task, onClick, onDragStart, onDragEnd }) => {
+  const taskRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = taskRef.current;
+    if (!element || !onDragStart) return;
+
+    const cleanup = addTouchDragSupport(element, task, {
+      onDragStart: (draggedTask) => {
+        // Create a synthetic drag event for compatibility
+        const syntheticEvent = {
+          preventDefault: () => {},
+          stopPropagation: () => {},
+          dataTransfer: {
+            setData: () => {},
+            effectAllowed: 'move' as const,
+          }
+        } as React.DragEvent<HTMLDivElement>;
+        onDragStart(syntheticEvent, draggedTask as ScheduledTaskType);
+      },
+      onDragEnd: () => {
+        // Create a synthetic drag event for compatibility
+        const syntheticEvent = {
+          preventDefault: () => {},
+          stopPropagation: () => {},
+        } as React.DragEvent<HTMLDivElement>;
+        onDragEnd?.(syntheticEvent);
+      }
+    });
+
+    return cleanup;
+  }, [task, onDragStart, onDragEnd]);
+
   return (
     <div
+      ref={taskRef}
       className={`scheduled-task priority-${task.priority}`}
       draggable={!!onDragStart}
       onClick={(e) => {

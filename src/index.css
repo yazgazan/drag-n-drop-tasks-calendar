@@ -9,6 +9,13 @@ body {
   background: #fafafa;
   color: #202020;
   overflow-x: hidden;
+  /* Prevent text selection during touch drag */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Prevent callouts on touch */
+  -webkit-touch-callout: none;
 }
 
 .container {
@@ -1731,4 +1738,52 @@ body {
 
 .project-group:last-child {
   margin-bottom: 0;
+}
+
+/* Touch drag support styles */
+.touch-ghost {
+  pointer-events: none;
+  z-index: 9999 !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  border-radius: 8px;
+}
+
+.touch-drag-over {
+  background-color: rgba(76, 175, 80, 0.1) !important;
+  border: 2px dashed #4CAF50 !important;
+  animation: pulse-green 0.6s infinite alternate;
+}
+
+@keyframes pulse-green {
+  from { 
+    background-color: rgba(76, 175, 80, 0.1);
+    border-color: #4CAF50;
+  }
+  to { 
+    background-color: rgba(76, 175, 80, 0.2);
+    border-color: #66BB6A;
+  }
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 768px) {
+  .task-item,
+  .scheduled-task,
+  .month-task {
+    touch-action: none; /* Prevent scrolling when dragging */
+    min-height: 44px; /* Minimum touch target size */
+  }
+  
+  .time-slot,
+  .month-day,
+  .unscheduled-drop-zone {
+    touch-action: none; /* Allow custom touch handling */
+  }
+  
+  /* Make drag targets more obvious on mobile */
+  .time-slot:empty::before {
+    content: '';
+    display: block;
+    min-height: 40px;
+  }
 }
