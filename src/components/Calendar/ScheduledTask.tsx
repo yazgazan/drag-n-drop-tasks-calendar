@@ -26,7 +26,7 @@ const ScheduledTask: React.FC<ScheduledTaskProps> = ({ task, onClick, onDragStar
             setData: () => {},
             effectAllowed: 'move' as const,
           }
-        } as React.DragEvent<HTMLDivElement>;
+        } as unknown as React.DragEvent<HTMLDivElement>;
         onDragStart(syntheticEvent, draggedTask as ScheduledTaskType);
       },
       onDragEnd: () => {
@@ -34,7 +34,7 @@ const ScheduledTask: React.FC<ScheduledTaskProps> = ({ task, onClick, onDragStar
         const syntheticEvent = {
           preventDefault: () => {},
           stopPropagation: () => {},
-        } as React.DragEvent<HTMLDivElement>;
+        } as unknown as React.DragEvent<HTMLDivElement>;
         onDragEnd?.(syntheticEvent);
       }
     });

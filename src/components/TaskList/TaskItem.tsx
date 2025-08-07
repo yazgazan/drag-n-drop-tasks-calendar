@@ -26,7 +26,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onDragStart, onDragEnd, onCli
             setData: () => {},
             effectAllowed: 'move' as const,
           }
-        } as React.DragEvent<HTMLDivElement>;
+        } as unknown as React.DragEvent<HTMLDivElement>;
         onDragStart(syntheticEvent, draggedTask as Task);
       },
       onDragEnd: () => {
@@ -34,7 +34,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onDragStart, onDragEnd, onCli
         const syntheticEvent = {
           preventDefault: () => {},
           stopPropagation: () => {},
-        } as React.DragEvent<HTMLDivElement>;
+        } as unknown as React.DragEvent<HTMLDivElement>;
         onDragEnd(syntheticEvent);
       }
     });
