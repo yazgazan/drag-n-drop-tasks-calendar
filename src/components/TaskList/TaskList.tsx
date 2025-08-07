@@ -11,6 +11,7 @@ interface TaskListProps {
   onDragLeave?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>) => void;
   onTaskClick?: (task: Task) => void;
+  onCreateTask?: (projectName: string) => void;
 }
 
 const TaskList: React.FC<TaskListProps> = ({ 
@@ -21,7 +22,8 @@ const TaskList: React.FC<TaskListProps> = ({
   onDragEnter, 
   onDragLeave, 
   onDrop,
-  onTaskClick 
+  onTaskClick,
+  onCreateTask 
 }) => {
   // Group tasks by project
   const groupedTasks = tasks.reduce((groups, task) => {
@@ -53,9 +55,18 @@ const TaskList: React.FC<TaskListProps> = ({
       >
         {sortedProjectNames.map((projectName) => (
           <div key={projectName} className="project-group">
-            <h3 className="project-header">
-              # {projectName}
-            </h3>
+            <div className="project-header">
+              <span className="project-name"># {projectName}</span>
+              {onCreateTask && (
+                <button 
+                  className="add-task-btn"
+                  onClick={() => onCreateTask(projectName)}
+                  title={`Add task to ${projectName}`}
+                >
+                  +
+                </button>
+              )}
+            </div>
             <div className="project-tasks">
               {groupedTasks[projectName].map((task) => (
                 <TaskItem

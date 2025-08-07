@@ -1,6 +1,6 @@
-import { Task, TodoistTask, TodoistProject } from '../types/task';
+import { Task, TodoistTask, TodoistProject, TodoistLabel } from '../types/task';
 
-export function convertTodoistTaskToTask(todoistTask: TodoistTask, projects?: TodoistProject[]): Task {
+export function convertTodoistTaskToTask(todoistTask: TodoistTask, projects?: TodoistProject[], labels?: TodoistLabel[]): Task {
   // Convert Todoist priority (1-4) to our format (p1-p4)
   const priorityMap: { [key: number]: 'p1' | 'p2' | 'p3' | 'p4' } = {
     4: 'p1', // Todoist priority 4 = highest (p1)
@@ -12,12 +12,18 @@ export function convertTodoistTaskToTask(todoistTask: TodoistTask, projects?: To
   // Find the project name if projects are provided
   const project = projects?.find(p => p.id === todoistTask.project_id);
 
+  // Convert label IDs to label names if labels are provided
+  const labelNames = todoistTask.labels?.map(labelId => {
+    const label = labels?.find(l => l.id === labelId);
+    return label?.name || labelId; // Fallback to ID if name not found
+  }) || [];
+
   return {
     id: todoistTask.id,
     title: todoistTask.content,
     description: todoistTask.description || '',
     priority: priorityMap[todoistTask.priority] || 'p4',
-    labels: todoistTask.labels || [],
+    labels: labelNames,
     project_id: todoistTask.project_id,
     project_name: project?.name || 'Inbox'
   };

@@ -127,30 +127,87 @@ export class TodoistApi {
   }
 
   static async createTask(task: Partial<TodoistTask>): Promise<TodoistTask> {
-    const tempId = this.generateUUID();
+    // Generate a temp_id for tracking the new item
+    const tempId = `temp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const command: Command = {
       type: 'item_add',
       uuid: this.generateUUID(),
+      temp_id: tempId,
       args: {
-        ...task,
-        temp_id: tempId
+        ...task
       }
     };
     
+    console.log('Creating task with command:', JSON.stringify(command, null, 2));
+    
     const response = await this.executeCommands([command]);
     
+    console.log('Create task response:', JSON.stringify(response, null, 2));
+    
     // Check for command execution errors
-    if (response.sync_status?.[command.uuid]?.error) {
-      throw new TodoistApiError(response.sync_status[command.uuid].error!);
+    const syncStatus = response.sync_status?.[command.uuid];
+    if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
+      const errorMsg = syncStatus.error;
+      console.error('Task creation failed with error:', errorMsg);
+      throw new TodoistApiError(`Task creation failed: ${errorMsg}`);
     }
     
-    // Return the created task from items array or construct from args
+    // Check if there's no sync_status at all (could indicate invalid request)
+    if (!response.sync_status && !response.items?.length) {
+      console.error('No sync_status or items in response, likely an invalid request');
+      throw new TodoistApiError('Task creation failed: Invalid request parameters');
+    }
+    
+    // Check if we have a temp_id mapping to the real ID
+    const realId = response.temp_id_mapping?.[tempId];
+    if (realId) {
+      console.log('Task created successfully with ID mapping:', tempId, '->', realId);
+      // Try to find the task in the response items
+      const createdTask = response.items?.find(item => item.id === realId);
+      if (createdTask) {
+        return createdTask;
+      }
+      
+      // If not in response items, construct the task from our data
+      console.log('Task not in response items, constructing from creation data...');
+      return {
+        id: realId,
+        content: task.content || '',
+        description: task.description || '',
+        project_id: task.project_id || '',
+        labels: task.labels || [],
+        priority: task.priority || 1,
+        order: 0,
+        url: '',
+        created_at: new Date().toISOString()
+      } as TodoistTask;
+    }
+    
+    // Return the created task from items array using temp_id
     const createdTask = response.items?.find(item => item.id === tempId);
     if (createdTask) {
+      console.log('Task created successfully:', createdTask.id);
       return createdTask;
     }
     
-    // Fallback: fetch all tasks to find the newly created one
+    // If we have sync_status "ok" but no task in items, create from our data
+    if (response.sync_status?.[command.uuid] === 'ok') {
+      console.log('Task creation confirmed by sync_status, but not in items. Creating task object from input data.');
+      return {
+        id: `created_${Date.now()}`, // Fallback ID if no mapping
+        content: task.content || '',
+        description: task.description || '',
+        project_id: task.project_id || '',
+        labels: task.labels || [],
+        priority: task.priority || 1,
+        order: 0,
+        url: '',
+        created_at: new Date().toISOString()
+      } as TodoistTask;
+    }
+    
+    // Final fallback: fetch all tasks to find the newly created one
+    console.log('Task not found in response, searching all tasks...');
     const allTasks = await this.getTasks();
     const newTask = allTasks.find(t => t.content === task.content && t.project_id === task.project_id);
     if (!newTask) {
@@ -180,8 +237,9 @@ export class TodoistApi {
     });
     
     // Check for command execution errors
-    if (response.sync_status?.[command.uuid]?.error) {
-      throw new TodoistApiError(response.sync_status[command.uuid].error!);
+    const syncStatus = response.sync_status?.[command.uuid];
+    if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
+      throw new TodoistApiError(syncStatus.error);
     }
     
     // If no sync_status, it might mean the command was invalid
@@ -229,8 +287,9 @@ export class TodoistApi {
     const response = await this.executeCommands([command]);
     
     // Check for command execution errors
-    if (response.sync_status?.[command.uuid]?.error) {
-      throw new TodoistApiError(response.sync_status[command.uuid].error!);
+    const syncStatus = response.sync_status?.[command.uuid];
+    if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
+      throw new TodoistApiError(syncStatus.error);
     }
     
     // Check if the updated task is in the response (only in full sync)
@@ -266,8 +325,9 @@ export class TodoistApi {
     const response = await this.executeCommands([command]);
     
     // Check for command execution errors
-    if (response.sync_status?.[command.uuid]?.error) {
-      throw new TodoistApiError(response.sync_status[command.uuid].error!);
+    const syncStatus = response.sync_status?.[command.uuid];
+    if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
+      throw new TodoistApiError(syncStatus.error);
     }
   }
 
@@ -280,5 +340,65 @@ export class TodoistApi {
   static async getLabels(): Promise<TodoistLabel[]> {
     const response = await this.sync(['labels']);
     return response.labels || [];
+  }
+
+  static async createLabel(label: { name: string; color?: string }): Promise<TodoistLabel> {
+    const command: Command = {
+      type: 'label_add',
+      uuid: this.generateUUID(),
+      temp_id: `temp_label_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      args: {
+        name: label.name,
+        color: label.color || 'charcoal' // Default color
+      }
+    };
+    
+    console.log('Creating label with command:', JSON.stringify(command, null, 2));
+    
+    const response = await this.executeCommands([command]);
+    
+    console.log('Create label response:', JSON.stringify(response, null, 2));
+    
+    // Check for command execution errors
+    const syncStatus = response.sync_status?.[command.uuid];
+    if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
+      const errorMsg = syncStatus.error;
+      console.error('Label creation failed with error:', errorMsg);
+      throw new TodoistApiError(`Label creation failed: ${errorMsg}`);
+    }
+    
+    // Check if we have a temp_id mapping to the real ID
+    const realId = response.temp_id_mapping?.[command.temp_id!];
+    if (realId) {
+      console.log('Label created successfully with ID mapping:', command.temp_id, '->', realId);
+      // Try to find the label in the response
+      const createdLabel = response.labels?.find(l => l.id === realId);
+      if (createdLabel) {
+        return createdLabel;
+      }
+      
+      // If not in response, construct from our data
+      return {
+        id: realId,
+        name: label.name,
+        color: label.color || 'charcoal',
+        order: 0,
+        is_favorite: false
+      } as TodoistLabel;
+    }
+    
+    // If we have sync_status "ok" but no mapping, create from our data
+    if (response.sync_status?.[command.uuid] === 'ok') {
+      console.log('Label creation confirmed by sync_status, creating label object from input data.');
+      return {
+        id: `created_label_${Date.now()}`,
+        name: label.name,
+        color: label.color || 'charcoal',
+        order: 0,
+        is_favorite: false
+      } as TodoistLabel;
+    }
+    
+    throw new TodoistApiError('Failed to create label');
   }
 }

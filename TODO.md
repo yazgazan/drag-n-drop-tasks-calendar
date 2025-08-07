@@ -44,6 +44,10 @@ This document outlines the tasks needed to transform the proof of concept into a
 - [x] **Enable multiple tasks per time slot (removes scheduling conflicts)**
 - [x] **Smart time selection for month view (starts from 5pm, fallback logic)**
 
+### ➕ Task Management Features
+- [x] **Add task creation functionality with + buttons next to project names**
+- [x] **Task creation modal with project assignment, priority, labels, and descriptions**
+
 ## Low Priority - Polish & Robustness
 
 ### ♿ Accessibility

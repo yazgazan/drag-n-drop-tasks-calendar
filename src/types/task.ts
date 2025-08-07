@@ -75,6 +75,7 @@ export interface SyncResponse {
   projects?: TodoistProject[];
   labels?: TodoistLabel[];
   sync_status?: SyncStatus;
+  temp_id_mapping?: { [temp_id: string]: string };
 }
 
 export interface SyncStatus {
@@ -82,7 +83,7 @@ export interface SyncStatus {
     error_code?: number;
     error?: string;
     error_extra?: unknown;
-  };
+  } | string;
 }
 
 export interface Command {

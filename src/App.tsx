@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Task, ScheduledTasks, ScheduledTask } from './types/task';
+import { Task, ScheduledTasks, ScheduledTask, TodoistProject, TodoistLabel, TodoistTask } from './types/task';
 import { TodoistApi, TodoistApiError } from './services/todoist-api';
 import { AuthService } from './services/auth';
 import { convertTodoistTaskToTask, convertTaskToTodoistTask } from './utils/taskConverter';
@@ -9,14 +9,19 @@ import TaskList from './components/TaskList/TaskList';
 import Calendar, { CalendarViewMode } from './components/Calendar/Calendar';
 import TaskModal from './components/TaskModal/TaskModal';
 import TaskEditModal from './components/TaskModal/TaskEditModal';
+import TaskCreateModal from './components/TaskModal/TaskCreateModal';
 
 function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTasks>({});
+  const [projects, setProjects] = useState<TodoistProject[]>([]);
+  const [labels, setLabels] = useState<TodoistLabel[]>([]);
   const [modalTask, setModalTask] = useState<ScheduledTask | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<ScheduledTask | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createTaskProject, setCreateTaskProject] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,22 +41,25 @@ function App() {
 
         setIsAuthenticated(true);
         
-        const [todoistTasks, projects] = await Promise.all([
+        const [todoistTasks, projectsList, labelsList] = await Promise.all([
           TodoistApi.getTasks(),
-          TodoistApi.getProjects()
+          TodoistApi.getProjects(),
+          TodoistApi.getLabels()
         ]);
         
-        console.log('Loaded tasks:', todoistTasks.length, 'projects:', projects.length);
+        console.log('Loaded tasks:', todoistTasks.length, 'projects:', projectsList.length, 'labels:', labelsList.length);
+        setProjects(projectsList);
+        setLabels(labelsList);
         console.log('Sample tasks:', todoistTasks.slice(0, 2));
         
         // Separate unscheduled and scheduled tasks
         const unscheduledTasks = todoistTasks
           .filter(task => !task.due)
-          .map(task => convertTodoistTaskToTask(task, projects));
+          .map(task => convertTodoistTaskToTask(task, projectsList, labelsList));
           
         const scheduledTasks = todoistTasks
           .filter(task => task.due && task.due.date) // Only check for due.date as it's always present
-          .map(task => convertTodoistTaskToTask(task, projects));
+          .map(task => convertTodoistTaskToTask(task, projectsList, labelsList));
           
         console.log('Scheduled tasks found:', scheduledTasks.length);
         console.log('First few scheduled tasks:', scheduledTasks.slice(0, 3).map(t => ({id: t.id, title: t.title})));
@@ -148,6 +156,112 @@ function App() {
     
     // Reload the app
     window.location.reload();
+  };
+
+  const handleCreateTask = (projectName: string) => {
+    setCreateTaskProject(projectName);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleSaveNewTask = async (taskData: {
+    title: string;
+    description: string;
+    priority: 'p1' | 'p2' | 'p3' | 'p4';
+    labels: string[];
+    projectName: string;
+  }) => {
+    try {
+      // Get project ID and convert labels to IDs
+      const projectId = getProjectIdByName(taskData.projectName);
+      const labelIds = await getLabelIdsByNames(taskData.labels);
+      
+      console.log('Creating task with:', {
+        title: taskData.title,
+        projectName: taskData.projectName,
+        projectId: projectId,
+        labelNames: taskData.labels,
+        labelIds: labelIds
+      });
+
+      // Create the task payload - only include fields that have values
+      const taskPayload: Partial<TodoistTask> = {
+        content: taskData.title,
+        priority: taskData.priority === 'p1' ? 4 : taskData.priority === 'p2' ? 3 : taskData.priority === 'p3' ? 2 : 1
+      };
+
+      // Only add optional fields if they have values
+      if (taskData.description.trim()) {
+        taskPayload.description = taskData.description;
+      }
+      
+      if (projectId) {
+        taskPayload.project_id = projectId;
+      }
+      
+      if (labelIds.length > 0) {
+        taskPayload.labels = labelIds;
+      }
+
+      // Create the new task via Todoist API
+      const newTodoistTask = await TodoistApi.createTask(taskPayload);
+
+      // Convert the new task and add it to the tasks list  
+      const newTask = convertTodoistTaskToTask(newTodoistTask, projects, labels);
+      
+      setTasks(prev => [...prev, newTask]);
+      
+      console.log(`Task "${taskData.title}" created successfully in project "${taskData.projectName}"`);
+      
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      const errorMessage = error instanceof TodoistApiError 
+        ? `Failed to create task: ${error.message}` 
+        : 'Failed to create task. Please try again.';
+      throw new Error(errorMessage);
+    }
+  };
+
+  const getProjectIdByName = (projectName: string): string => {
+    if (projectName === 'Inbox') {
+      // Find the inbox project
+      const inboxProject = projects.find(p => p.is_inbox_project);
+      return inboxProject?.id || '';
+    }
+    
+    // Find the project by name
+    const project = projects.find(p => p.name === projectName);
+    return project?.id || '';
+  };
+
+  const getLabelIdsByNames = async (labelNames: string[]): Promise<string[]> => {
+    const labelIds: string[] = [];
+    
+    for (const name of labelNames) {
+      // First try to find existing label
+      const existingLabel = labels.find(label => label.name === name);
+      if (existingLabel) {
+        labelIds.push(existingLabel.id);
+      } else {
+        // Create new label if it doesn't exist
+        try {
+          console.log(`Creating new label: ${name}`);
+          const newLabel = await TodoistApi.createLabel({ name });
+          labelIds.push(newLabel.id);
+          // Update local labels state
+          setLabels(prev => [...prev, newLabel]);
+        } catch (error) {
+          console.error(`Failed to create label "${name}":`, error);
+          // Continue without this label rather than failing completely
+        }
+      }
+    }
+    
+    return labelIds;
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setCreateTaskProject('');
   };
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, task: Task) => {
@@ -742,6 +856,7 @@ function App() {
         onDragLeave={handleUnscheduledDragLeave}
         onDrop={handleUnscheduledDrop}
         onTaskClick={handleUnscheduledTaskClick}
+        onCreateTask={handleCreateTask}
       />
       <Calendar
         scheduledTasks={scheduledTasks}
@@ -767,6 +882,12 @@ function App() {
         task={editingTask}
         onClose={handleCloseEditModal}
         onSave={handleSaveTask}
+      />
+      <TaskCreateModal
+        isOpen={isCreateModalOpen}
+        projectName={createTaskProject}
+        onClose={handleCloseCreateModal}
+        onSave={handleSaveNewTask}
       />
     </div>
   );
