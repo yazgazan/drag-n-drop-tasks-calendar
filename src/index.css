@@ -412,7 +412,6 @@ body {
 
 .time-slot.today {
   background: #f8f9fa;
-  border-left: 3px solid #2196f3;
 }
 
 .calendar-nav-button {
@@ -483,13 +482,6 @@ body {
   font-weight: 400;
 }
 
-.time-slot.has-tasks {
-  border-left: 3px solid #4caf50;
-}
-
-.time-slot.has-tasks.today {
-  border-left: 3px solid #2196f3;
-}
 
 /* Drag feedback */
 .drag-ghost {
