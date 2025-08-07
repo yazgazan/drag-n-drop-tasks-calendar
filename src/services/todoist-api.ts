@@ -342,6 +342,133 @@ export class TodoistApi {
     return response.labels || [];
   }
 
+  static async createProject(project: { name: string; color?: string; parent_id?: string }): Promise<TodoistProject> {
+    const tempId = `temp_project_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const command: Command = {
+      type: 'project_add',
+      uuid: this.generateUUID(),
+      temp_id: tempId,
+      args: {
+        name: project.name,
+        color: project.color || 'grey',
+        parent_id: project.parent_id
+      }
+    };
+    
+    console.log('Creating project with command:', JSON.stringify(command, null, 2));
+    
+    const response = await this.executeCommands([command]);
+    
+    console.log('Create project response:', JSON.stringify(response, null, 2));
+    
+    // Check for command execution errors
+    const syncStatus = response.sync_status?.[command.uuid];
+    if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
+      const errorMsg = syncStatus.error;
+      console.error('Project creation failed with error:', errorMsg);
+      throw new TodoistApiError(`Project creation failed: ${errorMsg}`);
+    }
+    
+    // Check if we have a temp_id mapping to the real ID
+    const realId = response.temp_id_mapping?.[tempId];
+    if (realId) {
+      console.log('Project created successfully with ID mapping:', tempId, '->', realId);
+      // Try to find the project in the response
+      const createdProject = response.projects?.find(p => p.id === realId);
+      if (createdProject) {
+        return createdProject;
+      }
+      
+      // If not in response, construct from our data
+      return {
+        id: realId,
+        name: project.name,
+        comment_count: 0,
+        order: 0,
+        color: project.color || 'grey',
+        is_shared: false,
+        is_favorite: false,
+        is_inbox_project: false,
+        is_team_inbox: false,
+        view_style: 'list',
+        url: '',
+        parent_id: project.parent_id
+      } as TodoistProject;
+    }
+    
+    // If we have sync_status "ok" but no mapping, create from our data
+    if (response.sync_status?.[command.uuid] === 'ok') {
+      console.log('Project creation confirmed by sync_status, creating project object from input data.');
+      return {
+        id: `created_project_${Date.now()}`,
+        name: project.name,
+        comment_count: 0,
+        order: 0,
+        color: project.color || 'grey',
+        is_shared: false,
+        is_favorite: false,
+        is_inbox_project: false,
+        is_team_inbox: false,
+        view_style: 'list',
+        url: '',
+        parent_id: project.parent_id
+      } as TodoistProject;
+    }
+    
+    throw new TodoistApiError('Failed to create project');
+  }
+
+  static async updateProject(projectId: string, updates: { name?: string; color?: string }): Promise<TodoistProject> {
+    const command: Command = {
+      type: 'project_update',
+      uuid: this.generateUUID(),
+      args: {
+        id: projectId,
+        ...updates
+      }
+    };
+    
+    console.log('Updating project with command:', JSON.stringify(command, null, 2));
+    const response = await this.executeCommands([command]);
+    
+    console.log('Update project response:', {
+      hasSyncStatus: !!response.sync_status,
+      syncStatus: response.sync_status,
+      commandUuid: command.uuid,
+      fullResponse: response
+    });
+    
+    // Check for command execution errors
+    const syncStatus = response.sync_status?.[command.uuid];
+    if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
+      throw new TodoistApiError(syncStatus.error);
+    }
+    
+    // Check if the updated project is in the response
+    const updatedProject = response.projects?.find(project => project.id === projectId);
+    if (updatedProject) {
+      return updatedProject;
+    }
+    
+    // For incremental sync, return a minimal project object since the command was successful
+    console.log('Project updated successfully but not returned in sync response (normal for incremental sync)');
+    
+    return {
+      id: projectId,
+      name: '',
+      comment_count: 0,
+      order: 0,
+      color: 'grey',
+      is_shared: false,
+      is_favorite: false,
+      is_inbox_project: false,
+      is_team_inbox: false,
+      view_style: 'list',
+      url: '',
+      ...updates
+    } as TodoistProject;
+  }
+
   static async createLabel(label: { name: string; color?: string }): Promise<TodoistLabel> {
     const command: Command = {
       type: 'label_add',

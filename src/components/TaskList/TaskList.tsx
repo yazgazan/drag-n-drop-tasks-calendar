@@ -1,9 +1,12 @@
 import React from 'react';
-import { Task } from '../../types/task';
+import { Task, TodoistProject } from '../../types/task';
 import TaskItem from './TaskItem';
+import ProjectManager from './ProjectManager';
+import ProjectCreator from './ProjectCreator';
 
 interface TaskListProps {
   tasks: Task[];
+  projects: TodoistProject[];
   onDragStart: (e: React.DragEvent<HTMLDivElement>, task: Task) => void;
   onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void;
   onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
@@ -12,10 +15,13 @@ interface TaskListProps {
   onDrop?: (e: React.DragEvent<HTMLDivElement>) => void;
   onTaskClick?: (task: Task) => void;
   onCreateTask?: (projectName: string) => void;
+  onCreateProject?: (name: string, color?: string) => Promise<void>;
+  onRenameProject?: (projectId: string, newName: string) => Promise<void>;
 }
 
 const TaskList: React.FC<TaskListProps> = ({ 
-  tasks, 
+  tasks,
+  projects,
   onDragStart, 
   onDragEnd, 
   onDragOver, 
@@ -23,7 +29,9 @@ const TaskList: React.FC<TaskListProps> = ({
   onDragLeave, 
   onDrop,
   onTaskClick,
-  onCreateTask 
+  onCreateTask,
+  onCreateProject,
+  onRenameProject
 }) => {
   // Group tasks by project
   const groupedTasks = tasks.reduce((groups, task) => {
@@ -35,16 +43,51 @@ const TaskList: React.FC<TaskListProps> = ({
     return groups;
   }, {} as Record<string, Task[]>);
 
+  // Create a comprehensive list of all projects (both with and without tasks)
+  const allProjectNames = new Set<string>();
+  
+  // Add projects that have tasks
+  Object.keys(groupedTasks).forEach(name => allProjectNames.add(name));
+  
+  // Add all projects from the projects list, ensuring Inbox is included
+  projects.forEach(project => {
+    if (project.is_inbox_project) {
+      allProjectNames.add('Inbox');
+    } else {
+      allProjectNames.add(project.name);
+    }
+  });
+
   // Sort project names, putting Inbox first
-  const sortedProjectNames = Object.keys(groupedTasks).sort((a, b) => {
+  const sortedProjectNames = Array.from(allProjectNames).sort((a, b) => {
     if (a === 'Inbox') return -1;
     if (b === 'Inbox') return 1;
     return a.localeCompare(b);
   });
 
+  // Ensure each project has an entry in groupedTasks (even if empty)
+  sortedProjectNames.forEach(projectName => {
+    if (!groupedTasks[projectName]) {
+      groupedTasks[projectName] = [];
+    }
+  });
+
+  // Helper function to find project by name
+  const findProjectByName = (projectName: string): TodoistProject | undefined => {
+    if (projectName === 'Inbox') {
+      return projects.find(p => p.is_inbox_project);
+    }
+    return projects.find(p => p.name === projectName);
+  };
+
   return (
     <div className="sidebar">
       <h2>📋 Unscheduled Tasks</h2>
+      
+      {onCreateProject && (
+        <ProjectCreator onCreateProject={onCreateProject} />
+      )}
+      
       <div 
         id="task-list"
         className="unscheduled-drop-zone"
@@ -53,33 +96,51 @@ const TaskList: React.FC<TaskListProps> = ({
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        {sortedProjectNames.map((projectName) => (
-          <div key={projectName} className="project-group">
-            <div className="project-header">
-              <span className="project-name"># {projectName}</span>
-              {onCreateTask && (
-                <button 
-                  className="add-task-btn"
-                  onClick={() => onCreateTask(projectName)}
-                  title={`Add task to ${projectName}`}
-                >
-                  +
-                </button>
-              )}
+        {sortedProjectNames.map((projectName) => {
+          const project = findProjectByName(projectName);
+          return (
+            <div key={projectName} className="project-group">
+              <div className="project-header">
+                {onRenameProject ? (
+                  <ProjectManager
+                    projectName={projectName}
+                    project={project}
+                    onCreateProject={onCreateProject!}
+                    onRenameProject={onRenameProject}
+                  />
+                ) : (
+                  <span className="project-name"># {projectName}</span>
+                )}
+                {onCreateTask && (
+                  <button 
+                    className="add-task-btn"
+                    onClick={() => onCreateTask(projectName)}
+                    title={`Add task to ${projectName}`}
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+              <div className="project-tasks">
+                {groupedTasks[projectName].length > 0 ? (
+                  groupedTasks[projectName].map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      onDragStart={onDragStart}
+                      onDragEnd={onDragEnd}
+                      onClick={onTaskClick}
+                    />
+                  ))
+                ) : (
+                  <div className="empty-project">
+                    No unscheduled tasks
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="project-tasks">
-              {groupedTasks[projectName].map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onDragStart={onDragStart}
-                  onDragEnd={onDragEnd}
-                  onClick={onTaskClick}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
         {tasks.length === 0 && (
           <div className="empty-drop-zone">
             Drop scheduled tasks here to unschedule them

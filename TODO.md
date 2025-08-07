@@ -47,6 +47,12 @@ This document outlines the tasks needed to transform the proof of concept into a
 ### ➕ Task Management Features
 - [x] **Add task creation functionality with + buttons next to project names**
 - [x] **Task creation modal with project assignment, priority, labels, and descriptions**
+- [x] **Add project management functionality (creating and renaming projects)**
+  - [x] Create new projects with color selection
+  - [x] Rename existing projects (excluding Inbox)
+  - [x] Project management UI integrated into sidebar
+  - [x] Real-time project updates across the application
+  - [x] Show all projects in sidebar, even those without unscheduled tasks
 
 ## Low Priority - Polish & Robustness
 

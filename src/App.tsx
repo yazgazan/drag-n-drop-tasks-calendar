@@ -233,7 +233,8 @@ function App() {
     return project?.id || '';
   };
 
-  const getLabelIdsByNames = async (labelNames: string[]): Promise<string[]> => {
+  // Keeping this function in case it's needed for future use
+  /* const getLabelIdsByNames = async (labelNames: string[]): Promise<string[]> => {
     const labelIds: string[] = [];
     
     for (const name of labelNames) {
@@ -257,7 +258,7 @@ function App() {
     }
     
     return labelIds;
-  };
+  }; */
 
   const getLabelIdsByNamesWithUpdatedState = async (labelNames: string[]): Promise<{labelIds: string[], updatedLabels: TodoistLabel[]}> => {
     const labelIds: string[] = [];
@@ -800,6 +801,58 @@ function App() {
     setEditingTask(null);
   };
 
+  const handleCreateProject = async (name: string, color?: string): Promise<void> => {
+    try {
+      console.log(`Creating project: ${name} with color: ${color}`);
+      const newProject = await TodoistApi.createProject({ name, color });
+      
+      setProjects(prev => [...prev, newProject]);
+      console.log(`Project "${name}" created successfully`);
+      
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      const errorMessage = error instanceof TodoistApiError 
+        ? `Failed to create project: ${error.message}` 
+        : 'Failed to create project. Please try again.';
+      throw new Error(errorMessage);
+    }
+  };
+
+  const handleRenameProject = async (projectId: string, newName: string): Promise<void> => {
+    try {
+      console.log(`Renaming project ${projectId} to: ${newName}`);
+      await TodoistApi.updateProject(projectId, { name: newName });
+      
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, name: newName } : p));
+      
+      // Update tasks with the new project name
+      setTasks(prev => prev.map(task => 
+        task.project_id === projectId ? { ...task, project_name: newName } : task
+      ));
+      
+      // Update scheduled tasks with the new project name
+      setScheduledTasks(prev => {
+        const newScheduled = { ...prev };
+        Object.keys(newScheduled).forEach(slotKey => {
+          newScheduled[slotKey] = newScheduled[slotKey].map(task => 
+            task.project_id === projectId ? { ...task, project_name: newName } : task
+          );
+        });
+        return newScheduled;
+      });
+      
+      console.log(`Project renamed to "${newName}" successfully`);
+      
+    } catch (error) {
+      console.error('Failed to rename project:', error);
+      const errorMessage = error instanceof TodoistApiError 
+        ? `Failed to rename project: ${error.message}` 
+        : 'Failed to rename project. Please try again.';
+      throw new Error(errorMessage);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="container">
@@ -878,6 +931,7 @@ function App() {
     <div className="container">
       <TaskList
         tasks={tasks}
+        projects={projects}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
@@ -886,6 +940,8 @@ function App() {
         onDrop={handleUnscheduledDrop}
         onTaskClick={handleUnscheduledTaskClick}
         onCreateTask={handleCreateTask}
+        onCreateProject={handleCreateProject}
+        onRenameProject={handleRenameProject}
       />
       <Calendar
         scheduledTasks={scheduledTasks}

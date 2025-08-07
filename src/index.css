@@ -30,8 +30,180 @@ body {
 .sidebar h2 {
   font-size: 18px;
   font-weight: 600;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   color: #202020;
+}
+
+/* Project Management Styles */
+.project-creator {
+  margin-bottom: 20px;
+}
+
+.new-project-btn {
+  width: 100%;
+  padding: 10px;
+  border: 2px dashed #ddd;
+  background: transparent;
+  border-radius: 8px;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.new-project-btn:hover {
+  border-color: #007bff;
+  color: #007bff;
+  background: #f8f9ff;
+}
+
+.project-creator.active {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.project-creator-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-name-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.project-name-input:focus {
+  border-color: #007bff;
+}
+
+.color-selector {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.color-option {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.color-option.selected {
+  border-color: #333;
+  transform: scale(1.2);
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+}
+
+/* Todoist-inspired colors */
+.color-grey { background-color: #b8b8b8; }
+.color-red { background-color: #ff5733; }
+.color-orange { background-color: #ff9500; }
+.color-yellow { background-color: #ffc107; }
+.color-green { background-color: #28a745; }
+.color-blue { background-color: #007bff; }
+.color-purple { background-color: #6f42c1; }
+.color-pink { background-color: #e83e8c; }
+
+.creator-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.save-btn, .cancel-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.save-btn {
+  background: #007bff;
+  color: white;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.save-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  background: #f8f9fa;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: #e9ecef;
+}
+
+.project-manager {
+  flex: 1;
+}
+
+.project-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.project-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.project-header-content:hover .project-actions {
+  opacity: 1;
+}
+
+.project-action-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.project-action-btn:hover {
+  background: #f0f0f0;
+}
+
+.empty-project {
+  padding: 12px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  font-size: 13px;
+  border: 1px dashed #ddd;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background: #fafafa;
 }
 
 .task-item {
