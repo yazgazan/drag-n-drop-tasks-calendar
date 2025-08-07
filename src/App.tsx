@@ -173,7 +173,7 @@ function App() {
     try {
       // Get project ID and convert labels to IDs
       const projectId = getProjectIdByName(taskData.projectName);
-      const labelIds = await getLabelIdsByNames(taskData.labels);
+      const { labelIds, updatedLabels } = await getLabelIdsByNamesWithUpdatedState(taskData.labels);
       
       console.log('Creating task with:', {
         title: taskData.title,
@@ -205,8 +205,8 @@ function App() {
       // Create the new task via Todoist API
       const newTodoistTask = await TodoistApi.createTask(taskPayload);
 
-      // Convert the new task and add it to the tasks list  
-      const newTask = convertTodoistTaskToTask(newTodoistTask, projects, labels);
+      // Convert the new task using the updated labels array (includes any newly created labels)
+      const newTask = convertTodoistTaskToTask(newTodoistTask, projects, updatedLabels);
       
       setTasks(prev => [...prev, newTask]);
       
@@ -257,6 +257,35 @@ function App() {
     }
     
     return labelIds;
+  };
+
+  const getLabelIdsByNamesWithUpdatedState = async (labelNames: string[]): Promise<{labelIds: string[], updatedLabels: TodoistLabel[]}> => {
+    const labelIds: string[] = [];
+    let updatedLabels = [...labels];
+    
+    for (const name of labelNames) {
+      // First try to find existing label
+      const existingLabel = updatedLabels.find(label => label.name === name);
+      if (existingLabel) {
+        labelIds.push(existingLabel.id);
+      } else {
+        // Create new label if it doesn't exist
+        try {
+          console.log(`Creating new label: ${name}`);
+          const newLabel = await TodoistApi.createLabel({ name });
+          labelIds.push(newLabel.id);
+          // Add to the updated labels array for immediate use
+          updatedLabels = [...updatedLabels, newLabel];
+          // Also update the component state
+          setLabels(prev => [...prev, newLabel]);
+        } catch (error) {
+          console.error(`Failed to create label "${name}":`, error);
+          // Continue without this label rather than failing completely
+        }
+      }
+    }
+    
+    return { labelIds, updatedLabels };
   };
 
   const handleCloseCreateModal = () => {
