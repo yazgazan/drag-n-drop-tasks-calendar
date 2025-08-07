@@ -93,7 +93,7 @@ const TaskList: React.FC<TaskListProps> = ({
 
   return (
     <div className="sidebar">
-      <h2>📋 Unscheduled Tasks</h2>
+      <h2>📋 Tasks</h2>
       
       {onCreateProject && (
         <ProjectCreator onCreateProject={onCreateProject} />

@@ -206,12 +206,14 @@ const Calendar: React.FC<CalendarProps> = ({
           onClick={() => navigate('prev')}
           className="calendar-nav-button"
         >
-          ← Previous
+          <span className="nav-text">← Previous</span>
+          <span className="nav-text-mobile">←</span>
         </button>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>
-            📅 {getRangeString()}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, justifyContent: 'center' }}>
+          <h2 className="calendar-title">
+            <span className="calendar-emoji">📅</span>
+            <span className="calendar-range">{getRangeString()}</span>
           </h2>
           
           <button 
@@ -244,7 +246,8 @@ const Calendar: React.FC<CalendarProps> = ({
           onClick={() => navigate('next')}
           className="calendar-nav-button"
         >
-          Next →
+          <span className="nav-text">Next →</span>
+          <span className="nav-text-mobile">→</span>
         </button>
       </div>
       
