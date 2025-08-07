@@ -111,7 +111,6 @@ const TaskCreateModal: React.FC<TaskCreateModalProps> = ({ isOpen, projectName, 
     'p4': 'Low'
   };
 
-  const priorityOptions: ('p1' | 'p2' | 'p3' | 'p4')[] = ['p1', 'p2', 'p3', 'p4'];
 
   const handlePrioritySliderChange = (value: number) => {
     setPrioritySliderValue(value);
