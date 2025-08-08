@@ -144,7 +144,16 @@ class TouchDragManager {
     // Clean up
     this.cleanup();
     
-    this.callbacks.onDragEnd?.(this.state.draggedTask!, dropTarget);
+    if (this.callbacks.onDragEnd) {
+      debugLogger.info('TOUCH_DRAG', 'Calling onDragEnd callback', {
+        hasCallback: !!this.callbacks.onDragEnd,
+        hasTask: !!this.state.draggedTask,
+        hasDropTarget: !!dropTarget
+      });
+      this.callbacks.onDragEnd(this.state.draggedTask!, dropTarget);
+    } else {
+      debugLogger.warn('TOUCH_DRAG', 'No onDragEnd callback set', {});
+    }
   };
 
   private createGhostElement(originalElement: HTMLElement, x: number, y: number) {
