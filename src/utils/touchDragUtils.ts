@@ -1,4 +1,5 @@
 import { Task, ScheduledTask } from '../types/task';
+import { debugLogger } from './debugLogger';
 
 interface TouchDragState {
   isDragging: boolean;
@@ -37,6 +38,12 @@ class TouchDragManager {
     const touch = e.touches[0];
     const rect = element.getBoundingClientRect();
     
+    debugLogger.info('TOUCH_DRAG', 'Touch start detected', {
+      task: task.title,
+      coordinates: { x: touch.clientX, y: touch.clientY },
+      elementRect: rect
+    });
+    
     this.state = {
       isDragging: false, // Don't start dragging immediately
       draggedElement: element,
@@ -64,6 +71,12 @@ class TouchDragManager {
       // Now we're actually starting to drag
       e.preventDefault();
       this.state.isDragging = true;
+      
+      debugLogger.info('TOUCH_DRAG', 'Drag threshold exceeded, starting drag', {
+        task: this.state.draggedTask?.title,
+        distance: distance,
+        coordinates: { x: touch.clientX, y: touch.clientY }
+      });
       
       // Create ghost element
       this.createGhostElement(this.state.draggedElement!, touch.clientX, touch.clientY);
@@ -118,7 +131,7 @@ class TouchDragManager {
     
     // Find drop target
     const dropTarget = this.getDropTarget(touch.clientX, touch.clientY);
-    console.log('Touch drag end:', {
+    debugLogger.info('TOUCH_DRAG', 'Touch drag end', {
       task: this.state.draggedTask?.title,
       dropTarget: dropTarget?.className,
       dropTargetData: dropTarget ? {
@@ -174,7 +187,21 @@ class TouchDragManager {
     
     if (ghost) ghost.style.display = 'block';
     
-    if (!elementBelow) return null;
+    debugLogger.info('TOUCH_DRAG', 'Finding drop target', {
+      coordinates: { x, y },
+      elementBelow: elementBelow ? {
+        tagName: elementBelow.tagName,
+        className: elementBelow.className,
+        id: elementBelow.id,
+        dataDate: elementBelow.dataset.date,
+        dataTime: elementBelow.dataset.time
+      } : null
+    });
+    
+    if (!elementBelow) {
+      debugLogger.warn('TOUCH_DRAG', 'No element found at coordinates');
+      return null;
+    }
     
     // Find the actual drop zone (time slot or task list)
     // Also check if the element itself is a drop zone
@@ -189,8 +216,19 @@ class TouchDragManager {
     
     // For time-slot, make sure it's not the time-label
     if (dropZone && dropZone.classList.contains('time-slot') && dropZone.classList.contains('time-label')) {
+      debugLogger.warn('TOUCH_DRAG', 'Drop target is time-label, ignoring');
       return null;
     }
+    
+    debugLogger.info('TOUCH_DRAG', 'Drop target found', {
+      dropZone: dropZone ? {
+        tagName: dropZone.tagName,
+        className: dropZone.className,
+        id: dropZone.id,
+        dataDate: dropZone.dataset.date,
+        dataTime: dropZone.dataset.time
+      } : null
+    });
     
     return dropZone;
   }

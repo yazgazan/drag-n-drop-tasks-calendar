@@ -6,11 +6,13 @@ import { convertTodoistTaskToTask, convertTaskToTodoistTask } from './utils/task
 import { calendarSlotToDate, getDateKey, findOptimalTimeSlot } from './utils/dateUtils';
 import { timeSlots } from './constants/calendar';
 import { touchDragManager } from './utils/touchDragUtils';
+import { debugLogger } from './utils/debugLogger';
 import TaskList from './components/TaskList/TaskList';
 import Calendar, { CalendarViewMode } from './components/Calendar/Calendar';
 import TaskModal from './components/TaskModal/TaskModal';
 import TaskEditModal from './components/TaskModal/TaskEditModal';
 import TaskCreateModal from './components/TaskModal/TaskCreateModal';
+import DebugModal from './components/DebugModal/DebugModal';
 
 function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -27,6 +29,12 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
+  const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
+  
+  // Debug state changes
+  useEffect(() => {
+    debugLogger.info('DEBUG_UI', 'Debug modal state changed', { isOpen: isDebugModalOpen });
+  }, [isDebugModalOpen]);
   const draggedTaskRef = useRef<Task | null>(null);
   const draggedScheduledTaskRef = useRef<ScheduledTask | null>(null);
 
@@ -48,10 +56,16 @@ function App() {
           TodoistApi.getLabels()
         ]);
         
-        console.log('Loaded tasks:', todoistTasks.length, 'projects:', projectsList.length, 'labels:', labelsList.length);
+        debugLogger.info('INITIALIZATION', 'Loaded data from Todoist', { 
+          tasks: todoistTasks.length, 
+          projects: projectsList.length, 
+          labels: labelsList.length 
+        });
         setProjects(projectsList);
         setLabels(labelsList);
-        console.log('Sample tasks:', todoistTasks.slice(0, 2));
+        debugLogger.info('INITIALIZATION', 'Sample tasks loaded', { 
+          sampleTasks: todoistTasks.slice(0, 2).map(t => ({ id: t.id, content: t.content })) 
+        });
         
         // Separate unscheduled and scheduled tasks
         const unscheduledTasks = todoistTasks
@@ -62,8 +76,10 @@ function App() {
           .filter(task => task.due && task.due.date) // Only check for due.date as it's always present
           .map(task => convertTodoistTaskToTask(task, projectsList, labelsList));
           
-        console.log('Scheduled tasks found:', scheduledTasks.length);
-        console.log('First few scheduled tasks:', scheduledTasks.slice(0, 3).map(t => ({id: t.id, title: t.title})));
+        debugLogger.info('INITIALIZATION', 'Scheduled tasks found', { count: scheduledTasks.length });
+        debugLogger.info('INITIALIZATION', 'First scheduled tasks', { 
+          tasks: scheduledTasks.slice(0, 3).map(t => ({ id: t.id, title: t.title })) 
+        });
         
         // Convert scheduled tasks to ScheduledTasks format
         const scheduledTasksMap: ScheduledTasks = {};
@@ -76,7 +92,10 @@ function App() {
             
             // Parse the due date - it might be in different formats
             const dueDateString = originalTodoistTask.due.date;
-            console.log('Processing task:', task.title, 'with due date:', dueDateString);
+            debugLogger.info('TASK_PROCESSING', 'Processing task due date', { 
+              taskTitle: task.title, 
+              dueDateString 
+            });
             
             try {
               // Handle various date formats from the API
@@ -96,7 +115,10 @@ function App() {
               
               // Ensure the date is valid
               if (isNaN(dueDate.getTime())) {
-                console.warn('Invalid date for task:', task.title, dueDateString);
+                debugLogger.warn('TASK_PROCESSING', 'Invalid date for task', { 
+                  taskTitle: task.title, 
+                  dueDateString 
+                });
                 return;
               }
               
@@ -110,7 +132,10 @@ function App() {
               };
               
               const slotKey = `${dateKey}-${timeKey}`;
-              console.log('Adding scheduled task to slot:', slotKey, 'for task:', task.title);
+              debugLogger.info('TASK_PROCESSING', 'Adding scheduled task to slot', { 
+                slotKey, 
+                taskTitle: task.title 
+              });
               
               if (!scheduledTasksMap[slotKey]) {
                 scheduledTasksMap[slotKey] = [];
@@ -118,19 +143,26 @@ function App() {
               scheduledTasksMap[slotKey].push(scheduledTask);
               
             } catch (error) {
-              console.error('Error processing due date for task:', task.title, error);
+              debugLogger.error('TASK_PROCESSING', 'Error processing due date', { 
+                taskTitle: task.title, 
+                error: error.message 
+              });
             }
           }
         });
         
-        console.log('Final scheduled tasks map:', Object.keys(scheduledTasksMap).length, 'entries');
-        console.log('Scheduled task keys:', Object.keys(scheduledTasksMap));
+        debugLogger.info('INITIALIZATION', 'Final scheduled tasks map created', { 
+          entriesCount: Object.keys(scheduledTasksMap).length 
+        });
+        debugLogger.info('INITIALIZATION', 'Scheduled task keys', { 
+          keys: Object.keys(scheduledTasksMap) 
+        });
         
         setTasks(unscheduledTasks);
         setScheduledTasks(scheduledTasksMap);
         setError(null);
       } catch (err) {
-        console.error('Failed to load tasks:', err);
+        debugLogger.error('INITIALIZATION', 'Failed to load tasks', { error: err.message });
         if (err instanceof TodoistApiError) {
           setError(`Todoist API Error: ${err.message}`);
           // If it's an auth error, clear the token
@@ -153,10 +185,12 @@ function App() {
     e.preventDefault();
     const target = e.target as HTMLElement;
     
-    console.log('handleDrop called with target:', target?.className);
-    console.log('Target data attributes:', {
-      date: target.dataset?.date,
-      time: target.dataset?.time
+    debugLogger.info('DROP_HANDLER', 'handleDrop called', {
+      targetClassName: target?.className,
+      targetData: {
+        date: target.dataset?.date,
+        time: target.dataset?.time
+      }
     });
     
     // Find the correct drop target (may be a child element)
@@ -234,7 +268,10 @@ function App() {
       let finalTime = time;
       if (isMonthViewDay) {
         finalTime = findOptimalTimeSlot(calendarDate, scheduledTasks, timeSlots);
-        console.log(`Month view: Using smart time selection - ${finalTime} instead of ${time}`);
+        debugLogger.info('SMART_SCHEDULING', 'Month view smart time selection', { 
+          originalTime: time, 
+          selectedTime: finalTime 
+        });
       }
       
       const dateSlotKey = `${date}-${finalTime}`;
@@ -244,13 +281,12 @@ function App() {
         // Convert to ISO datetime for Todoist API
         const dueDateTime = calendarSlotToDate(calendarDate, finalTime);
         
-        console.log('Scheduling task:', {
+        debugLogger.info('TASK_SCHEDULING', 'Scheduling task', {
           taskId: taskToSchedule.id,
           taskTitle: taskToSchedule.title,
           originalDate: date,
           originalTime: time,
           finalTime: finalTime,
-          calendarDate: calendarDate,
           dueDateTime: dueDateTime
         });
         
@@ -283,11 +319,14 @@ function App() {
           }
         });
 
-        console.log(`Task "${taskToSchedule.title}" scheduled for ${dueDateTime}`);
+        debugLogger.info('TASK_SCHEDULING', 'Task scheduled successfully', { 
+          taskTitle: taskToSchedule.title, 
+          dueDateTime 
+        });
 
       } catch (error) {
-        console.error('Failed to update task due date:', error);
-        console.error('Request details:', {
+        debugLogger.error('TASK_SCHEDULING', 'Failed to update task due date', { error: error.message });
+        debugLogger.error('TASK_SCHEDULING', 'Failed request details', {
           taskId: taskToSchedule.id,
           date: date,
           originalTime: time,
@@ -344,7 +383,7 @@ function App() {
   useEffect(() => {
     touchDragManager.setCallbacks({
       onDragEnd: (task, dropTarget) => {
-        console.log('Touch drag ended with:', {
+        debugLogger.info('APP_DRAG_END', 'Touch drag ended', {
           task: task?.title,
           dropTarget: dropTarget?.className,
           hasDataDate: !!dropTarget?.dataset.date,
@@ -354,13 +393,13 @@ function App() {
         });
         
         if (!dropTarget) {
-          console.log('No drop target found, aborting drop');
+          debugLogger.warn('APP_DRAG_END', 'No drop target found, aborting drop');
           return;
         }
         
         // Verify drop target has required data attributes
         if (!dropTarget.dataset.date || !dropTarget.dataset.time) {
-          console.log('Drop target missing required data attributes:', {
+          debugLogger.error('APP_DRAG_END', 'Drop target missing required data attributes', {
             date: dropTarget.dataset.date,
             time: dropTarget.dataset.time
           });
@@ -418,7 +457,9 @@ function App() {
         } as unknown as React.DragEvent<HTMLDivElement>;
         
         // Call the drop handler directly instead of dispatching an event
-        console.log('Calling handleDrop from touch manager with target:', dropTarget?.className);
+        debugLogger.info('APP_DRAG_END', 'Calling handleDrop from touch manager', {
+          targetClassName: dropTarget?.className
+        });
         handleDrop(syntheticEvent);
       }
     });
@@ -451,7 +492,7 @@ function App() {
       const projectId = getProjectIdByName(taskData.projectName);
       const { labelIds, updatedLabels } = await getLabelIdsByNamesWithUpdatedState(taskData.labels);
       
-      console.log('Creating task with:', {
+      debugLogger.info('TASK_CREATION', 'Creating task', {
         title: taskData.title,
         projectName: taskData.projectName,
         projectId: projectId,
@@ -486,10 +527,13 @@ function App() {
       
       setTasks(prev => [...prev, newTask]);
       
-      console.log(`Task "${taskData.title}" created successfully in project "${taskData.projectName}"`);
+      debugLogger.info('TASK_CREATION', 'Task created successfully', { 
+        taskTitle: taskData.title, 
+        projectName: taskData.projectName 
+      });
       
     } catch (error) {
-      console.error('Failed to create task:', error);
+      debugLogger.error('TASK_CREATION', 'Failed to create task', { error: error.message });
       const errorMessage = error instanceof TodoistApiError 
         ? `Failed to create task: ${error.message}` 
         : 'Failed to create task. Please try again.';
@@ -521,13 +565,16 @@ function App() {
       } else {
         // Create new label if it doesn't exist
         try {
-          console.log(`Creating new label: ${name}`);
+          debugLogger.info('LABEL_CREATION', 'Creating new label', { labelName: name });
           const newLabel = await TodoistApi.createLabel({ name });
           labelIds.push(newLabel.id);
           // Update local labels state
           setLabels(prev => [...prev, newLabel]);
         } catch (error) {
-          console.error(`Failed to create label "${name}":`, error);
+          debugLogger.error('LABEL_CREATION', 'Failed to create label', { 
+            labelName: name, 
+            error: error.message 
+          });
           // Continue without this label rather than failing completely
         }
       }
@@ -548,7 +595,7 @@ function App() {
       } else {
         // Create new label if it doesn't exist
         try {
-          console.log(`Creating new label: ${name}`);
+          debugLogger.info('LABEL_CREATION', 'Creating new label', { labelName: name });
           const newLabel = await TodoistApi.createLabel({ name });
           labelIds.push(newLabel.id);
           // Add to the updated labels array for immediate use
@@ -556,7 +603,10 @@ function App() {
           // Also update the component state
           setLabels(prev => [...prev, newLabel]);
         } catch (error) {
-          console.error(`Failed to create label "${name}":`, error);
+          debugLogger.error('LABEL_CREATION', 'Failed to create label', { 
+            labelName: name, 
+            error: error.message 
+          });
           // Continue without this label rather than failing completely
         }
       }
@@ -704,10 +754,12 @@ function App() {
       // Clear due date in Todoist API
       await TodoistApi.clearTaskDueDate(scheduledTask.id);
       
-      console.log(`Task "${scheduledTask.title}" unscheduled via drag and drop`);
+      debugLogger.info('TASK_UNSCHEDULING', 'Task unscheduled via drag and drop', { 
+        taskTitle: scheduledTask.title 
+      });
       
     } catch (error) {
-      console.error('Failed to unschedule task:', error);
+      debugLogger.error('TASK_UNSCHEDULING', 'Failed to unschedule task', { error: error.message });
       
       // Rollback optimistic update
       setScheduledTasks(prev => {
@@ -784,11 +836,13 @@ function App() {
         // Clear due date in Todoist API
         await TodoistApi.clearTaskDueDate(modalTask.id);
         
-        console.log(`Task "${modalTask.title}" unscheduled`);
+        debugLogger.info('TASK_UNSCHEDULING', 'Task unscheduled from modal', { 
+          taskTitle: modalTask.title 
+        });
         handleCloseModal();
         
       } catch (error) {
-        console.error('Failed to unschedule task:', error);
+        debugLogger.error('TASK_UNSCHEDULING', 'Failed to unschedule task', { error: error.message });
         
         // Rollback optimistic update
         setScheduledTasks(prev => {
@@ -876,10 +930,12 @@ function App() {
         ));
       }
 
-      console.log(`Task "${updatedTaskData.title || editingTask.title}" updated successfully`);
+      debugLogger.info('TASK_EDITING', 'Task updated successfully', { 
+        taskTitle: updatedTaskData.title || editingTask.title 
+      });
 
     } catch (error) {
-      console.error('Failed to update task:', error);
+      debugLogger.error('TASK_EDITING', 'Failed to update task', { error: error.message });
       const errorMessage = error instanceof TodoistApiError 
         ? `Failed to update task: ${error.message}` 
         : 'Failed to update task. Please try again.';
@@ -894,14 +950,14 @@ function App() {
 
   const handleCreateProject = async (name: string): Promise<void> => {
     try {
-      console.log(`Creating project: ${name}`);
+      debugLogger.info('PROJECT_CREATION', 'Creating project', { projectName: name });
       const newProject = await TodoistApi.createProject({ name });
       
       setProjects(prev => [...prev, newProject]);
-      console.log(`Project "${name}" created successfully`);
+      debugLogger.info('PROJECT_CREATION', 'Project created successfully', { projectName: name });
       
     } catch (error) {
-      console.error('Failed to create project:', error);
+      debugLogger.error('PROJECT_CREATION', 'Failed to create project', { error: error.message });
       const errorMessage = error instanceof TodoistApiError 
         ? `Failed to create project: ${error.message}` 
         : 'Failed to create project. Please try again.';
@@ -911,7 +967,7 @@ function App() {
 
   const handleRenameProject = async (projectId: string, newName: string): Promise<void> => {
     try {
-      console.log(`Renaming project ${projectId} to: ${newName}`);
+      debugLogger.info('PROJECT_RENAMING', 'Renaming project', { projectId, newName });
       await TodoistApi.updateProject(projectId, { name: newName });
       
       setProjects(prev => prev.map(p => p.id === projectId ? { ...p, name: newName } : p));
@@ -932,10 +988,10 @@ function App() {
         return newScheduled;
       });
       
-      console.log(`Project renamed to "${newName}" successfully`);
+      debugLogger.info('PROJECT_RENAMING', 'Project renamed successfully', { newName });
       
     } catch (error) {
-      console.error('Failed to rename project:', error);
+      debugLogger.error('PROJECT_RENAMING', 'Failed to rename project', { error: error.message });
       const errorMessage = error instanceof TodoistApiError 
         ? `Failed to rename project: ${error.message}` 
         : 'Failed to rename project. Please try again.';
@@ -1065,6 +1121,20 @@ function App() {
         onClose={handleCloseCreateModal}
         onSave={handleSaveNewTask}
       />
+      <DebugModal
+        isOpen={isDebugModalOpen}
+        onClose={() => setIsDebugModalOpen(false)}
+      />
+      <button
+        className="debug-button"
+        onClick={() => {
+          debugLogger.info('DEBUG_UI', 'Debug button clicked', {});
+          setIsDebugModalOpen(true);
+        }}
+        title="Debug Logs"
+      >
+        🐛
+      </button>
     </div>
   );
 }

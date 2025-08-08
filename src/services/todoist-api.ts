@@ -1,5 +1,6 @@
 import { AuthService } from './auth';
 import { TodoistTask, TodoistProject, TodoistLabel, SyncResponse, Command, SyncRequest } from '../types/task';
+import { debugLogger } from '../utils/debugLogger';
 
 export class TodoistApiError extends Error {
   constructor(message: string, public status?: number, public response?: unknown) {
@@ -35,7 +36,7 @@ export class TodoistApi {
       'Content-Type': 'application/x-www-form-urlencoded',
     };
 
-    console.log('Making sync request:', {
+    debugLogger.info('TODOIST_API', 'Making sync request', {
       url,
       syncToken: data.sync_token,
       resourceTypes: data.resource_types,
@@ -51,7 +52,7 @@ export class TodoistApi {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Todoist API Error Details:', {
+        debugLogger.error('TODOIST_API', 'API Error Details', {
           status: response.status,
           statusText: response.statusText,
           url: url,
@@ -66,7 +67,7 @@ export class TodoistApi {
 
       const result = await response.json();
       
-      console.log('Sync response:', {
+      debugLogger.info('TODOIST_API', 'Sync response received', {
         hasItems: !!result.items,
         itemsCount: result.items?.length || 0,
         hasProjects: !!result.projects,
@@ -113,7 +114,7 @@ export class TodoistApi {
 
   static async getTasks(): Promise<TodoistTask[]> {
     const response = await this.sync(['items']);
-    console.log('getTasks response:', response);
+    debugLogger.info('TODOIST_API', 'getTasks response', { itemCount: response.items?.length || 0 });
     return response.items || [];
   }
 
@@ -138,30 +139,40 @@ export class TodoistApi {
       }
     };
     
-    console.log('Creating task with command:', JSON.stringify(command, null, 2));
+    debugLogger.info('TODOIST_API', 'Creating task with command', { command });
     
     const response = await this.executeCommands([command]);
     
-    console.log('Create task response:', JSON.stringify(response, null, 2));
+    debugLogger.info('TODOIST_API', 'Create task response', { 
+      hasItems: !!response.items, 
+      itemCount: response.items?.length || 0,
+      syncStatus: response.sync_status 
+    });
     
     // Check for command execution errors
     const syncStatus = response.sync_status?.[command.uuid];
     if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
       const errorMsg = syncStatus.error;
-      console.error('Task creation failed with error:', errorMsg);
+      debugLogger.error('TODOIST_API', 'Task creation failed', { error: errorMsg });
       throw new TodoistApiError(`Task creation failed: ${errorMsg}`);
     }
     
     // Check if there's no sync_status at all (could indicate invalid request)
     if (!response.sync_status && !response.items?.length) {
-      console.error('No sync_status or items in response, likely an invalid request');
+      debugLogger.error('TODOIST_API', 'Invalid task creation response', { 
+        hasSyncStatus: !!response.sync_status, 
+        hasItems: !!response.items 
+      });
       throw new TodoistApiError('Task creation failed: Invalid request parameters');
     }
     
     // Check if we have a temp_id mapping to the real ID
     const realId = response.temp_id_mapping?.[tempId];
     if (realId) {
-      console.log('Task created successfully with ID mapping:', tempId, '->', realId);
+      debugLogger.info('TODOIST_API', 'Task created with ID mapping', { 
+        tempId, 
+        realId 
+      });
       // Try to find the task in the response items
       const createdTask = response.items?.find(item => item.id === realId);
       if (createdTask) {
@@ -169,7 +180,7 @@ export class TodoistApi {
       }
       
       // If not in response items, construct the task from our data
-      console.log('Task not in response items, constructing from creation data...');
+      debugLogger.info('TODOIST_API', 'Task not in response items, constructing from creation data', {});
       return {
         id: realId,
         content: task.content || '',
@@ -186,13 +197,13 @@ export class TodoistApi {
     // Return the created task from items array using temp_id
     const createdTask = response.items?.find(item => item.id === tempId);
     if (createdTask) {
-      console.log('Task created successfully:', createdTask.id);
+      debugLogger.info('TODOIST_API', 'Task created successfully', { taskId: createdTask.id });
       return createdTask;
     }
     
     // If we have sync_status "ok" but no task in items, create from our data
     if (response.sync_status?.[command.uuid] === 'ok') {
-      console.log('Task creation confirmed by sync_status, but not in items. Creating task object from input data.');
+      debugLogger.info('TODOIST_API', 'Task creation confirmed by sync_status, creating from input data', {});
       return {
         id: `created_${Date.now()}`, // Fallback ID if no mapping
         content: task.content || '',
@@ -207,7 +218,7 @@ export class TodoistApi {
     }
     
     // Final fallback: fetch all tasks to find the newly created one
-    console.log('Task not found in response, searching all tasks...');
+    debugLogger.info('TODOIST_API', 'Task not found in response, searching all tasks', {});
     const allTasks = await this.getTasks();
     const newTask = allTasks.find(t => t.content === task.content && t.project_id === task.project_id);
     if (!newTask) {
@@ -226,14 +237,13 @@ export class TodoistApi {
       }
     };
     
-    console.log('Executing update command:', command);
+    debugLogger.info('TODOIST_API', 'Executing update command', { command });
     const response = await this.executeCommands([command]);
     
-    console.log('Update task response:', {
+    debugLogger.info('TODOIST_API', 'Update task response', {
       hasSyncStatus: !!response.sync_status,
       syncStatus: response.sync_status,
-      commandUuid: command.uuid,
-      fullResponse: response
+      commandUuid: command.uuid
     });
     
     // Check for command execution errors
@@ -244,7 +254,7 @@ export class TodoistApi {
     
     // If no sync_status, it might mean the command was invalid
     if (!response.sync_status) {
-      console.warn('No sync_status in response - command may have failed silently');
+      debugLogger.warn('TODOIST_API', 'No sync_status in update response', {});
     }
     
     // Check if the updated task is in the response (only in full sync)
@@ -256,7 +266,7 @@ export class TodoistApi {
     // For incremental sync, the task won't be in items array unless it's a new task
     // Since the command was successful, we can construct the response or return a simplified task
     // For now, we'll return a minimal task object since the UI will update optimistically
-    console.log('Task updated successfully but not returned in sync response (normal for incremental sync)');
+    debugLogger.info('TODOIST_API', 'Task updated successfully', {});
     
     // Return a minimal task object - the UI has already been updated optimistically
     return {
@@ -274,7 +284,7 @@ export class TodoistApi {
   }
 
   static async clearTaskDueDate(taskId: string): Promise<TodoistTask> {
-    console.log(`Clearing due date for task ${taskId}`);
+    debugLogger.info('TODOIST_API', 'Clearing task due date', { taskId });
     const command: Command = {
       type: 'item_update',
       uuid: this.generateUUID(),
@@ -299,7 +309,7 @@ export class TodoistApi {
     }
     
     // For incremental sync, return a minimal task object since the command was successful
-    console.log('Task due date cleared successfully');
+    debugLogger.info('TODOIST_API', 'Task due date cleared successfully', {});
     return {
       id: taskId,
       content: '',
@@ -333,7 +343,7 @@ export class TodoistApi {
 
   static async getProjects(): Promise<TodoistProject[]> {
     const response = await this.sync(['projects']);
-    console.log('getProjects response:', response);
+    debugLogger.info('TODOIST_API', 'getProjects response', { projectCount: response.projects?.length || 0 });
     return response.projects || [];
   }
 
@@ -355,24 +365,28 @@ export class TodoistApi {
       }
     };
     
-    console.log('Creating project with command:', JSON.stringify(command, null, 2));
+    debugLogger.info('TODOIST_API', 'Creating project with command', { command });
     
     const response = await this.executeCommands([command]);
     
-    console.log('Create project response:', JSON.stringify(response, null, 2));
+    debugLogger.info('TODOIST_API', 'Create project response', { 
+      hasProjects: !!response.projects,
+      projectCount: response.projects?.length || 0,
+      syncStatus: response.sync_status
+    });
     
     // Check for command execution errors
     const syncStatus = response.sync_status?.[command.uuid];
     if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
       const errorMsg = syncStatus.error;
-      console.error('Project creation failed with error:', errorMsg);
+      debugLogger.error('TODOIST_API', 'Project creation failed', { error: errorMsg });
       throw new TodoistApiError(`Project creation failed: ${errorMsg}`);
     }
     
     // Check if we have a temp_id mapping to the real ID
     const realId = response.temp_id_mapping?.[tempId];
     if (realId) {
-      console.log('Project created successfully with ID mapping:', tempId, '->', realId);
+      debugLogger.info('TODOIST_API', 'Project created with ID mapping', { tempId, realId });
       // Try to find the project in the response
       const createdProject = response.projects?.find(p => p.id === realId);
       if (createdProject) {
@@ -398,7 +412,7 @@ export class TodoistApi {
     
     // If we have sync_status "ok" but no mapping, create from our data
     if (response.sync_status?.[command.uuid] === 'ok') {
-      console.log('Project creation confirmed by sync_status, creating project object from input data.');
+      debugLogger.info('TODOIST_API', 'Project creation confirmed, creating from input data', {});
       return {
         id: `created_project_${Date.now()}`,
         name: project.name,
@@ -428,10 +442,10 @@ export class TodoistApi {
       }
     };
     
-    console.log('Updating project with command:', JSON.stringify(command, null, 2));
+    debugLogger.info('TODOIST_API', 'Updating project with command', { command });
     const response = await this.executeCommands([command]);
     
-    console.log('Update project response:', {
+    debugLogger.info('TODOIST_API', 'Update project response', {
       hasSyncStatus: !!response.sync_status,
       syncStatus: response.sync_status,
       commandUuid: command.uuid,
@@ -451,7 +465,7 @@ export class TodoistApi {
     }
     
     // For incremental sync, return a minimal project object since the command was successful
-    console.log('Project updated successfully but not returned in sync response (normal for incremental sync)');
+    debugLogger.info('TODOIST_API', 'Project updated successfully', {});
     
     return {
       id: projectId,
@@ -480,24 +494,31 @@ export class TodoistApi {
       }
     };
     
-    console.log('Creating label with command:', JSON.stringify(command, null, 2));
+    debugLogger.info('TODOIST_API', 'Creating label with command', { command });
     
     const response = await this.executeCommands([command]);
     
-    console.log('Create label response:', JSON.stringify(response, null, 2));
+    debugLogger.info('TODOIST_API', 'Create label response', { 
+      hasLabels: !!response.labels,
+      labelCount: response.labels?.length || 0,
+      syncStatus: response.sync_status
+    });
     
     // Check for command execution errors
     const syncStatus = response.sync_status?.[command.uuid];
     if (syncStatus && typeof syncStatus === 'object' && syncStatus.error) {
       const errorMsg = syncStatus.error;
-      console.error('Label creation failed with error:', errorMsg);
+      debugLogger.error('TODOIST_API', 'Label creation failed', { error: errorMsg });
       throw new TodoistApiError(`Label creation failed: ${errorMsg}`);
     }
     
     // Check if we have a temp_id mapping to the real ID
     const realId = response.temp_id_mapping?.[command.temp_id!];
     if (realId) {
-      console.log('Label created successfully with ID mapping:', command.temp_id, '->', realId);
+      debugLogger.info('TODOIST_API', 'Label created with ID mapping', { 
+        tempId: command.temp_id, 
+        realId 
+      });
       // Try to find the label in the response
       const createdLabel = response.labels?.find(l => l.id === realId);
       if (createdLabel) {
@@ -516,7 +537,7 @@ export class TodoistApi {
     
     // If we have sync_status "ok" but no mapping, create from our data
     if (response.sync_status?.[command.uuid] === 'ok') {
-      console.log('Label creation confirmed by sync_status, creating label object from input data.');
+      debugLogger.info('TODOIST_API', 'Label creation confirmed, creating from input data', {});
       return {
         id: `created_label_${Date.now()}`,
         name: label.name,
