@@ -383,13 +383,16 @@ function App() {
   useEffect(() => {
     touchDragManager.setCallbacks({
       onDragEnd: (task, dropTarget) => {
-        debugLogger.info('APP_DRAG_END', 'Touch drag ended', {
+        debugLogger.info('APP_DRAG_END', 'Touch drag ended - callback called', {
           task: task?.title,
           dropTarget: dropTarget?.className,
           hasDataDate: !!dropTarget?.dataset.date,
           hasDataTime: !!dropTarget?.dataset.time,
           dataDate: dropTarget?.dataset.date,
-          dataTime: dropTarget?.dataset.time
+          dataTime: dropTarget?.dataset.time,
+          taskType: typeof task,
+          hasTimeProperty: 'time' in (task || {}),
+          taskKeys: task ? Object.keys(task) : []
         });
         
         if (!dropTarget) {
