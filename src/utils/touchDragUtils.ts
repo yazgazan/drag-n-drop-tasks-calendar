@@ -121,6 +121,10 @@ class TouchDragManager {
     console.log('Touch drag end:', {
       task: this.state.draggedTask?.title,
       dropTarget: dropTarget?.className,
+      dropTargetData: dropTarget ? {
+        date: dropTarget.dataset.date,
+        time: dropTarget.dataset.time
+      } : null,
       coordinates: { x: touch.clientX, y: touch.clientY }
     });
     
@@ -173,8 +177,22 @@ class TouchDragManager {
     if (!elementBelow) return null;
     
     // Find the actual drop zone (time slot or task list)
-    const dropZone = elementBelow.closest('.time-slot, .month-day, .unscheduled-drop-zone');
-    return dropZone as HTMLElement;
+    // Also check if the element itself is a drop zone
+    let dropZone = elementBelow.closest('.time-slot, .month-day, .unscheduled-drop-zone') as HTMLElement;
+    
+    // If element itself has the drop zone class, use it
+    if (!dropZone && (elementBelow.classList.contains('time-slot') || 
+                      elementBelow.classList.contains('month-day') || 
+                      elementBelow.classList.contains('unscheduled-drop-zone'))) {
+      dropZone = elementBelow;
+    }
+    
+    // For time-slot, make sure it's not the time-label
+    if (dropZone && dropZone.classList.contains('time-slot') && dropZone.classList.contains('time-label')) {
+      return null;
+    }
+    
+    return dropZone;
   }
 
   private cleanup() {

@@ -154,6 +154,10 @@ function App() {
     const target = e.target as HTMLElement;
     
     console.log('handleDrop called with target:', target?.className);
+    console.log('Target data attributes:', {
+      date: target.dataset?.date,
+      time: target.dataset?.time
+    });
     
     // Find the correct drop target (may be a child element)
     const dropTarget = target.closest('.time-slot, .month-day') as HTMLElement;
@@ -340,7 +344,28 @@ function App() {
   useEffect(() => {
     touchDragManager.setCallbacks({
       onDragEnd: (task, dropTarget) => {
-        if (!dropTarget) return;
+        console.log('Touch drag ended with:', {
+          task: task?.title,
+          dropTarget: dropTarget?.className,
+          hasDataDate: !!dropTarget?.dataset.date,
+          hasDataTime: !!dropTarget?.dataset.time,
+          dataDate: dropTarget?.dataset.date,
+          dataTime: dropTarget?.dataset.time
+        });
+        
+        if (!dropTarget) {
+          console.log('No drop target found, aborting drop');
+          return;
+        }
+        
+        // Verify drop target has required data attributes
+        if (!dropTarget.dataset.date || !dropTarget.dataset.time) {
+          console.log('Drop target missing required data attributes:', {
+            date: dropTarget.dataset.date,
+            time: dropTarget.dataset.time
+          });
+          return;
+        }
         
         // Set the dragged task reference based on task type
         if ('time' in task) {
