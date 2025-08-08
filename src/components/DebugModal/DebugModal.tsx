@@ -61,7 +61,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose }) => {
           <div className="debug-filters">
             <select 
               value={filter} 
-              onChange={(e) => setFilter(e.target.value as any)}
+              onChange={(e) => setFilter(e.target.value as 'all' | 'info' | 'warn' | 'error')}
               className="debug-filter"
             >
               <option value="all">All Levels</option>

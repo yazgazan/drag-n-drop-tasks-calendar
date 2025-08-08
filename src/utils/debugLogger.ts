@@ -3,14 +3,14 @@ interface DebugLog {
   level: 'info' | 'warn' | 'error';
   category: string;
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 class DebugLogger {
   private logs: DebugLog[] = [];
   private maxLogs = 100; // Keep only the last 100 logs
 
-  log(level: 'info' | 'warn' | 'error', category: string, message: string, data?: any) {
+  log(level: 'info' | 'warn' | 'error', category: string, message: string, data?: unknown) {
     const logEntry: DebugLog = {
       timestamp: new Date().toISOString(),
       level,
@@ -41,15 +41,15 @@ class DebugLogger {
     }
   }
 
-  info(category: string, message: string, data?: any) {
+  info(category: string, message: string, data?: unknown) {
     this.log('info', category, message, data);
   }
 
-  warn(category: string, message: string, data?: any) {
+  warn(category: string, message: string, data?: unknown) {
     this.log('warn', category, message, data);
   }
 
-  error(category: string, message: string, data?: any) {
+  error(category: string, message: string, data?: unknown) {
     this.log('error', category, message, data);
   }
 
