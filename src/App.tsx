@@ -15,6 +15,9 @@ import TaskCreateModal from './components/TaskModal/TaskCreateModal';
 import DebugModal from './components/DebugModal/DebugModal';
 
 function App() {
+  // Add debug logging for component render
+  debugLogger.info('APP_RENDER', 'App component rendering', { timestamp: Date.now() });
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTasks>({});
   const [projects, setProjects] = useState<TodoistProject[]>([]);
@@ -381,8 +384,12 @@ function App() {
 
   // Set up touch drag callbacks (must be before conditional returns)
   useEffect(() => {
-    debugLogger.info('APP_SETUP', 'Setting up touch drag callbacks', {
-      handleDropFunction: !!handleDrop
+    debugLogger.info('APP_SETUP', 'useEffect for touch drag callbacks STARTING', {
+      handleDropFunction: !!handleDrop,
+      timestamp: Date.now(),
+      isAuthenticated,
+      loading,
+      error: !!error
     });
     
     touchDragManager.setCallbacks({
@@ -470,6 +477,11 @@ function App() {
         });
         handleDrop(syntheticEvent);
       }
+    });
+    
+    debugLogger.info('APP_SETUP', 'useEffect for touch drag callbacks COMPLETED', {
+      callbacksSet: true,
+      timestamp: Date.now()
     });
   }, [handleDrop]);
 
@@ -1009,6 +1021,7 @@ function App() {
 
 
   if (loading) {
+    debugLogger.info('APP_RENDER', 'Returning loading state', { loading, isAuthenticated, error: !!error });
     return (
       <div className="container">
         <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -1019,6 +1032,7 @@ function App() {
   }
 
   if (!isAuthenticated) {
+    debugLogger.info('APP_RENDER', 'Returning unauthenticated state', { loading, isAuthenticated, error: !!error });
     return (
       <div className="container">
         <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -1062,6 +1076,7 @@ function App() {
   }
 
   if (error) {
+    debugLogger.info('APP_RENDER', 'Returning error state', { loading, isAuthenticated, error: !!error });
     return (
       <div className="container">
         <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
@@ -1082,6 +1097,8 @@ function App() {
     );
   }
 
+  debugLogger.info('APP_RENDER', 'Returning main app UI', { loading, isAuthenticated, error: !!error, tasksCount: tasks.length });
+  
   return (
     <div className="container">
       <TaskList
