@@ -197,9 +197,22 @@ function App() {
     });
     
     // Find the correct drop target (may be a child element)
-    const dropTarget = target.closest('.time-slot, .month-day') as HTMLElement;
+    // For touch drag, the target IS the drop target, so check it first
+    const dropTarget = target.classList.contains('time-slot') || target.classList.contains('month-day') 
+      ? target 
+      : target.closest('.time-slot, .month-day') as HTMLElement;
+    
+    debugLogger.info('DROP_HANDLER', 'Drop target search result', {
+      hasDropTarget: !!dropTarget,
+      dropTargetClassName: dropTarget?.className,
+      dropTargetData: dropTarget ? {
+        date: dropTarget.dataset?.date,
+        time: dropTarget.dataset?.time
+      } : null
+    });
     
     if (!dropTarget) {
+      debugLogger.warn('DROP_HANDLER', 'No drop target found, aborting');
       return;
     }
     
@@ -209,18 +222,41 @@ function App() {
     const isWeekViewSlot = dropTarget.classList.contains('time-slot') && !dropTarget.classList.contains('time-label');
     const isMonthViewDay = dropTarget.classList.contains('month-day');
     
+    debugLogger.info('DROP_HANDLER', 'Drop target validation', {
+      isWeekViewSlot,
+      isMonthViewDay,
+      hasTimeSlotClass: dropTarget.classList.contains('time-slot'),
+      hasTimeLabelClass: dropTarget.classList.contains('time-label'),
+      hasMonthDayClass: dropTarget.classList.contains('month-day'),
+      allClasses: Array.from(dropTarget.classList)
+    });
+    
     if (!isWeekViewSlot && !isMonthViewDay) {
+      debugLogger.warn('DROP_HANDLER', 'Drop target validation failed, not a valid slot');
       return;
     }
 
     const date = dropTarget.dataset.date;
     const time = dropTarget.dataset.time;
     
+    debugLogger.info('DROP_HANDLER', 'Drop target data extracted', {
+      date,
+      time
+    });
+    
     // Handle both unscheduled tasks and scheduled tasks being moved between calendar slots
     const draggedTask = draggedTaskRef.current;
     const draggedScheduledTask = draggedScheduledTaskRef.current;
     
+    debugLogger.info('DROP_HANDLER', 'Dragged task data', {
+      hasDraggedTask: !!draggedTask,
+      hasDraggedScheduledTask: !!draggedScheduledTask,
+      draggedTaskTitle: draggedTask?.title || draggedScheduledTask?.title,
+      draggedTaskId: draggedTask?.id || draggedScheduledTask?.id
+    });
+    
     if (!draggedTask && !draggedScheduledTask) {
+      debugLogger.warn('DROP_HANDLER', 'No dragged task found, aborting');
       return;  
     }
 
@@ -392,7 +428,7 @@ function App() {
       error: !!error
     });
     
-    touchDragManager.setCallbacks({
+    touchDragManager.setGlobalCallbacks({
       onDragEnd: (task, dropTarget) => {
         debugLogger.info('APP_DRAG_END', 'CALLBACK ENTRY - This should always show!', {});
         debugLogger.info('APP_DRAG_END', 'Touch drag ended - callback called', {

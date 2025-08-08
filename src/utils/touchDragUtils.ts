@@ -30,8 +30,18 @@ class TouchDragManager {
     onDragEnd?: (task: Task | ScheduledTask, dropTarget: HTMLElement | null) => void;
   } = {};
 
+  private globalCallbacks: {
+    onDragStart?: (task: Task | ScheduledTask, element: HTMLElement) => void;
+    onDragMove?: (x: number, y: number, task: Task | ScheduledTask) => void;
+    onDragEnd?: (task: Task | ScheduledTask, dropTarget: HTMLElement | null) => void;
+  } = {};
+
   setCallbacks(callbacks: typeof this.callbacks) {
     this.callbacks = callbacks;
+  }
+
+  setGlobalCallbacks(callbacks: typeof this.globalCallbacks) {
+    this.globalCallbacks = callbacks;
   }
 
   handleTouchStart = (e: TouchEvent, task: Task | ScheduledTask, element: HTMLElement) => {
@@ -87,7 +97,9 @@ class TouchDragManager {
         this.state.draggedElement.classList.add('dragging');
       }
       
+      // Call both local and global onDragStart callbacks
       this.callbacks.onDragStart?.(this.state.draggedTask!, this.state.draggedElement!);
+      this.globalCallbacks.onDragStart?.(this.state.draggedTask!, this.state.draggedElement!);
     }
     
     if (this.state.isDragging && this.state.ghostElement) {
@@ -100,7 +112,9 @@ class TouchDragManager {
       // Highlight potential drop targets
       this.updateDropTargets(touch.clientX, touch.clientY);
       
+      // Call both local and global onDragMove callbacks
       this.callbacks.onDragMove?.(touch.clientX, touch.clientY, this.state.draggedTask!);
+      this.globalCallbacks.onDragMove?.(touch.clientX, touch.clientY, this.state.draggedTask!);
     }
   };
 
@@ -147,17 +161,20 @@ class TouchDragManager {
     // Clean up
     this.cleanup();
     
-    if (this.callbacks.onDragEnd) {
-      debugLogger.info('TOUCH_DRAG', 'Calling onDragEnd callback', {
-        hasCallback: !!this.callbacks.onDragEnd,
-        hasTask: !!draggedTask,
-        hasDropTarget: !!dropTarget,
-        taskTitle: draggedTask?.title
-      });
-      this.callbacks.onDragEnd(draggedTask!, dropTarget);
-    } else {
-      debugLogger.warn('TOUCH_DRAG', 'No onDragEnd callback set', {});
-    }
+    // Call both local and global onDragEnd callbacks
+    debugLogger.info('TOUCH_DRAG', 'Calling callbacks', {
+      hasLocalCallback: !!this.callbacks.onDragEnd,
+      hasGlobalCallback: !!this.globalCallbacks.onDragEnd,
+      hasTask: !!draggedTask,
+      hasDropTarget: !!dropTarget,
+      taskTitle: draggedTask?.title
+    });
+    
+    // Call local callback first (for component-level handling)
+    this.callbacks.onDragEnd?.(draggedTask!, dropTarget);
+    
+    // Call global callback second (for app-level handling like actual dropping)
+    this.globalCallbacks.onDragEnd?.(draggedTask!, dropTarget);
   };
 
   private createGhostElement(originalElement: HTMLElement, x: number, y: number) {
