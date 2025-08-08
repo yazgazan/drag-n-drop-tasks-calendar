@@ -107,9 +107,9 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose }) => {
                   <span className="log-category">[{log.category}]</span>
                 </div>
                 <div className="log-message">{log.message}</div>
-                {log.data && (
+                {log.data != null && (
                   <div className="log-data">
-                    <pre>{JSON.stringify(log.data, null, 2)}</pre>
+                    <pre>{JSON.stringify(log.data, null, 2) || 'null'}</pre>
                   </div>
                 )}
               </div>

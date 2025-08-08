@@ -145,7 +145,7 @@ function App() {
             } catch (error) {
               debugLogger.error('TASK_PROCESSING', 'Error processing due date', { 
                 taskTitle: task.title, 
-                error: error.message 
+                error: error instanceof Error ? error.message : String(error) 
               });
             }
           }
@@ -162,7 +162,7 @@ function App() {
         setScheduledTasks(scheduledTasksMap);
         setError(null);
       } catch (err) {
-        debugLogger.error('INITIALIZATION', 'Failed to load tasks', { error: err.message });
+        debugLogger.error('INITIALIZATION', 'Failed to load tasks', { error: err instanceof Error ? err.message : String(err) });
         if (err instanceof TodoistApiError) {
           setError(`Todoist API Error: ${err.message}`);
           // If it's an auth error, clear the token
@@ -325,7 +325,7 @@ function App() {
         });
 
       } catch (error) {
-        debugLogger.error('TASK_SCHEDULING', 'Failed to update task due date', { error: error.message });
+        debugLogger.error('TASK_SCHEDULING', 'Failed to update task due date', { error: error instanceof Error ? error.message : String(error) });
         debugLogger.error('TASK_SCHEDULING', 'Failed request details', {
           taskId: taskToSchedule.id,
           date: date,
@@ -533,7 +533,7 @@ function App() {
       });
       
     } catch (error) {
-      debugLogger.error('TASK_CREATION', 'Failed to create task', { error: error.message });
+      debugLogger.error('TASK_CREATION', 'Failed to create task', { error: error instanceof Error ? error.message : String(error) });
       const errorMessage = error instanceof TodoistApiError 
         ? `Failed to create task: ${error.message}` 
         : 'Failed to create task. Please try again.';
@@ -573,7 +573,7 @@ function App() {
         } catch (error) {
           debugLogger.error('LABEL_CREATION', 'Failed to create label', { 
             labelName: name, 
-            error: error.message 
+            error: error instanceof Error ? error.message : String(error) 
           });
           // Continue without this label rather than failing completely
         }
@@ -605,7 +605,7 @@ function App() {
         } catch (error) {
           debugLogger.error('LABEL_CREATION', 'Failed to create label', { 
             labelName: name, 
-            error: error.message 
+            error: error instanceof Error ? error.message : String(error) 
           });
           // Continue without this label rather than failing completely
         }
@@ -759,7 +759,7 @@ function App() {
       });
       
     } catch (error) {
-      debugLogger.error('TASK_UNSCHEDULING', 'Failed to unschedule task', { error: error.message });
+      debugLogger.error('TASK_UNSCHEDULING', 'Failed to unschedule task', { error: error instanceof Error ? error.message : String(error) });
       
       // Rollback optimistic update
       setScheduledTasks(prev => {
@@ -842,7 +842,7 @@ function App() {
         handleCloseModal();
         
       } catch (error) {
-        debugLogger.error('TASK_UNSCHEDULING', 'Failed to unschedule task', { error: error.message });
+        debugLogger.error('TASK_UNSCHEDULING', 'Failed to unschedule task', { error: error instanceof Error ? error.message : String(error) });
         
         // Rollback optimistic update
         setScheduledTasks(prev => {
@@ -935,7 +935,7 @@ function App() {
       });
 
     } catch (error) {
-      debugLogger.error('TASK_EDITING', 'Failed to update task', { error: error.message });
+      debugLogger.error('TASK_EDITING', 'Failed to update task', { error: error instanceof Error ? error.message : String(error) });
       const errorMessage = error instanceof TodoistApiError 
         ? `Failed to update task: ${error.message}` 
         : 'Failed to update task. Please try again.';
@@ -957,7 +957,7 @@ function App() {
       debugLogger.info('PROJECT_CREATION', 'Project created successfully', { projectName: name });
       
     } catch (error) {
-      debugLogger.error('PROJECT_CREATION', 'Failed to create project', { error: error.message });
+      debugLogger.error('PROJECT_CREATION', 'Failed to create project', { error: error instanceof Error ? error.message : String(error) });
       const errorMessage = error instanceof TodoistApiError 
         ? `Failed to create project: ${error.message}` 
         : 'Failed to create project. Please try again.';
@@ -991,7 +991,7 @@ function App() {
       debugLogger.info('PROJECT_RENAMING', 'Project renamed successfully', { newName });
       
     } catch (error) {
-      debugLogger.error('PROJECT_RENAMING', 'Failed to rename project', { error: error.message });
+      debugLogger.error('PROJECT_RENAMING', 'Failed to rename project', { error: error instanceof Error ? error.message : String(error) });
       const errorMessage = error instanceof TodoistApiError 
         ? `Failed to rename project: ${error.message}` 
         : 'Failed to rename project. Please try again.';
