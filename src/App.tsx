@@ -381,8 +381,13 @@ function App() {
 
   // Set up touch drag callbacks (must be before conditional returns)
   useEffect(() => {
+    debugLogger.info('APP_SETUP', 'Setting up touch drag callbacks', {
+      handleDropFunction: !!handleDrop
+    });
+    
     touchDragManager.setCallbacks({
       onDragEnd: (task, dropTarget) => {
+        debugLogger.info('APP_DRAG_END', 'CALLBACK ENTRY - This should always show!', {});
         debugLogger.info('APP_DRAG_END', 'Touch drag ended - callback called', {
           task: task?.title,
           dropTarget: dropTarget?.className,
