@@ -141,16 +141,20 @@ class TouchDragManager {
       coordinates: { x: touch.clientX, y: touch.clientY }
     });
     
+    // Store references before cleanup
+    const draggedTask = this.state.draggedTask;
+    
     // Clean up
     this.cleanup();
     
     if (this.callbacks.onDragEnd) {
       debugLogger.info('TOUCH_DRAG', 'Calling onDragEnd callback', {
         hasCallback: !!this.callbacks.onDragEnd,
-        hasTask: !!this.state.draggedTask,
-        hasDropTarget: !!dropTarget
+        hasTask: !!draggedTask,
+        hasDropTarget: !!dropTarget,
+        taskTitle: draggedTask?.title
       });
-      this.callbacks.onDragEnd(this.state.draggedTask!, dropTarget);
+      this.callbacks.onDragEnd(draggedTask!, dropTarget);
     } else {
       debugLogger.warn('TOUCH_DRAG', 'No onDragEnd callback set', {});
     }
