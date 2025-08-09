@@ -76,3 +76,50 @@ Mobile users should now be able to successfully complete drag and drop operation
 
 ### Confidence Level: High
 The fix addresses the most likely root cause identified in the original bug analysis, and all verification checks passed successfully.
+
+---
+
+## Follow-up Fix (2025-08-09 - Second Attempt)
+
+### New Root Cause Discovered
+After analyzing updated logs.json, the real issue was identified:
+
+**Problem**: Touch drag events were properly detected and drop targets found, but the global callback in App.tsx was never being called or was failing silently.
+
+**Evidence from logs**: 
+- ✅ Touch drag flow completes successfully with `hasGlobalCallback: true`
+- ❌ No `APP_DRAG_END` logs appear, indicating the global callback wasn't executed
+- ❌ No `APP_SETUP` logs appear, suggesting useEffect dependency issues
+
+### Root Causes Identified and Fixed
+
+#### 1. **Silent Callback Failures** (FIXED)
+- **Issue**: Global and local callbacks had no error handling
+- **Solution**: Added comprehensive try-catch blocks with debug logging in touchDragUtils.ts:174-195
+- **Impact**: Will now log exactly where callback execution fails
+
+#### 2. **useEffect Dependency Issue** (FIXED)  
+- **Issue**: useEffect that sets global callbacks had empty dependency array `[]` but should depend on `handleDrop`
+- **Solution**: Changed dependency array to `[handleDrop]` in App.tsx:536
+- **Impact**: Ensures callbacks are re-registered when handleDrop function changes
+
+#### 3. **Improved Debugging** (ADDED)
+- **Added**: Global callback registration logging in touchDragUtils.ts:44-47
+- **Added**: debugCallbackStatus() method for runtime debugging
+- **Added**: Detailed error logging for both local and global callback execution
+
+### Files Modified
+1. **src/utils/touchDragUtils.ts**: Added error handling and debug logging for callbacks
+2. **src/App.tsx**: Fixed useEffect dependencies to include handleDrop
+
+### Expected Result
+With these fixes:
+1. The useEffect will properly re-register the global callback when needed
+2. Any callback failures will be logged with detailed error information  
+3. The touch drag → drop handler → API call chain should now work on mobile
+
+### Next Steps for Testing
+1. Clear browser cache to ensure new code loads
+2. Test on mobile device with debug logging enabled (🐛 button)
+3. Look for new log categories: `APP_SETUP`, `APP_DRAG_END`, and enhanced `TOUCH_DRAG` logs
+4. If still failing, the detailed error logs will pinpoint the exact failure location

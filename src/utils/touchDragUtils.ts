@@ -41,7 +41,21 @@ class TouchDragManager {
   }
 
   setGlobalCallbacks(callbacks: typeof this.globalCallbacks) {
+    debugLogger.info('TOUCH_DRAG', 'Setting global callbacks', {
+      hasOnDragEnd: !!callbacks.onDragEnd,
+      callbackType: typeof callbacks.onDragEnd
+    });
     this.globalCallbacks = callbacks;
+  }
+
+  // Debug method to check callback status
+  debugCallbackStatus() {
+    debugLogger.info('TOUCH_DRAG', 'Current callback status', {
+      hasLocalOnDragEnd: !!this.callbacks.onDragEnd,
+      hasGlobalOnDragEnd: !!this.globalCallbacks.onDragEnd,
+      localCallbackType: typeof this.callbacks.onDragEnd,
+      globalCallbackType: typeof this.globalCallbacks.onDragEnd
+    });
   }
 
   handleTouchStart = (e: TouchEvent, task: Task | ScheduledTask, element: HTMLElement) => {
@@ -171,10 +185,28 @@ class TouchDragManager {
     });
     
     // Call local callback first (for component-level handling)
-    this.callbacks.onDragEnd?.(draggedTask!, dropTarget);
+    try {
+      if (this.callbacks.onDragEnd) {
+        debugLogger.info('TOUCH_DRAG', 'Calling local callback');
+        this.callbacks.onDragEnd(draggedTask!, dropTarget);
+        debugLogger.info('TOUCH_DRAG', 'Local callback completed');
+      }
+    } catch (error) {
+      debugLogger.error('TOUCH_DRAG', 'Local callback failed', { error });
+    }
     
     // Call global callback second (for app-level handling like actual dropping)
-    this.globalCallbacks.onDragEnd?.(draggedTask!, dropTarget);
+    try {
+      if (this.globalCallbacks.onDragEnd) {
+        debugLogger.info('TOUCH_DRAG', 'Calling global callback');
+        this.globalCallbacks.onDragEnd(draggedTask!, dropTarget);
+        debugLogger.info('TOUCH_DRAG', 'Global callback completed');
+      } else {
+        debugLogger.warn('TOUCH_DRAG', 'No global callback registered');
+      }
+    } catch (error) {
+      debugLogger.error('TOUCH_DRAG', 'Global callback failed', { error });
+    }
   };
 
   private createGhostElement(originalElement: HTMLElement, x: number, y: number) {

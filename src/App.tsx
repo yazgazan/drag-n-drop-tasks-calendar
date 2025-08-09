@@ -533,7 +533,7 @@ function App() {
     } catch (error) {
       debugLogger.error('APP_SETUP', 'Error in useEffect for touch drag callbacks', { error });
     }
-  }, []); // Run once on mount - no dependencies
+  }, [handleDrop]); // Re-run when handleDrop changes
 
   const handleLogin = (token: string) => {
     AuthService.setToken(token);
