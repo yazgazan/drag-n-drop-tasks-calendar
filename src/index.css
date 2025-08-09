@@ -643,6 +643,8 @@ body {
   .month-day {
     min-height: 80px;
     padding: 6px;
+    width: 100%;
+    overflow: hidden;
   }
   
   .month-day-number {
@@ -654,6 +656,9 @@ body {
     padding: 1px 4px;
     font-size: 10px;
     border-radius: 3px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
   .month-task-more {
@@ -761,6 +766,8 @@ body {
   .month-day {
     min-height: 70px;
     padding: 4px;
+    width: 100%;
+    overflow: hidden;
   }
   
   .month-day-number {
@@ -771,6 +778,9 @@ body {
   .month-task {
     padding: 1px 3px;
     font-size: 9px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
   .month-task-more {
@@ -794,6 +804,14 @@ body {
   
   .month-day {
     min-height: 60px;
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .month-task {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }
 
@@ -1275,7 +1293,7 @@ body {
 
 .month-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
   margin-bottom: 1px;
   background: #e8e8e8;
@@ -1288,6 +1306,7 @@ body {
   font-weight: 600;
   font-size: 13px;
   color: #666;
+  min-width: 0;
 }
 
 .month-grid {
@@ -1302,7 +1321,7 @@ body {
 
 .month-week {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
 }
 
@@ -1313,6 +1332,8 @@ body {
   position: relative;
   transition: all 0.2s ease;
   cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .month-day:hover {
@@ -1358,6 +1379,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  width: 100%;
+  overflow: hidden;
 }
 
 .month-task {
@@ -1372,6 +1395,9 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .month-task:hover {
