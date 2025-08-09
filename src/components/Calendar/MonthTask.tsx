@@ -35,6 +35,8 @@ const MonthTask: React.FC<MonthTaskProps> = ({ task, onClick, onDragStart, onDra
         const syntheticEvent = {
           preventDefault: () => {},
           stopPropagation: () => {},
+          target: element,
+          currentTarget: element,
         } as unknown as React.DragEvent<HTMLDivElement>;
         onDragEnd?.(syntheticEvent);
       }

@@ -34,6 +34,8 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onDragStart, onDragEnd, onCli
         const syntheticEvent = {
           preventDefault: () => {},
           stopPropagation: () => {},
+          target: element,
+          currentTarget: element,
         } as unknown as React.DragEvent<HTMLDivElement>;
         onDragEnd(syntheticEvent);
       }
