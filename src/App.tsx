@@ -533,7 +533,7 @@ function App() {
     } catch (error) {
       debugLogger.error('APP_SETUP', 'Error in useEffect for touch drag callbacks', { error });
     }
-  }, [handleDrop]);
+  }, [isAuthenticated]);
 
   const handleLogin = (token: string) => {
     AuthService.setToken(token);
