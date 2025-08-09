@@ -1770,7 +1770,7 @@ body {
   .task-item,
   .scheduled-task,
   .month-task {
-    touch-action: pan-y; /* Allow vertical scrolling but handle horizontal drag */
+    touch-action: none; /* Disable all default touch behaviors to prevent interference with custom drag handling */
     min-height: 44px; /* Minimum touch target size */
   }
   
