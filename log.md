@@ -173,3 +173,60 @@ This fix addresses the fundamental async execution issue that was preventing the
 - ✅ Build successful (227.65 kB, gzip: 66.55 kB)
 - ✅ TypeScript compilation passed
 - ⏳ Ready for mobile device testing
+
+---
+
+## Enhanced Debugging (2025-08-09 - Fourth Attempt)
+
+### New Analysis from Latest Logs
+
+After carefully analyzing the logs.json again, I discovered the root issue:
+
+**Problem**: The callback WAS executing successfully (APP_DRAG_END logs appear), but the execution flow was stopping somewhere after the initial logs and before handleDrop.
+
+**Evidence from logs (lines 250-280)**:
+- ✅ "CALLBACK ENTRY - This should always show!" appears  
+- ✅ "Touch drag ended - callback called" appears with full task data
+- ❌ No logs after line ~447 in the callback appear  
+- ❌ No "About to call handleDrop" or handleDrop result logs
+- ❌ Touch manager logs "Global callback failed" but with empty error objects
+
+### Root Cause and Solution
+
+#### **Enhanced Error Logging** (ADDED)
+The empty error objects `{}` in the logs indicated that JavaScript Error objects weren't serializing properly to JSON. 
+
+**Solution Applied**:
+1. **Enhanced error serialization**: Modified error logging in both touchDragUtils.ts and App.tsx to properly serialize Error objects with name, message, and stack trace
+2. **Added execution flow tracking**: Added detailed logging at each step of the callback execution to identify exactly where it stops
+3. **Added drop target validation logging**: Enhanced validation logging to see if data attributes are missing or corrupted
+4. **Added task reference logging**: Added logging around task type detection and reference setting
+
+#### **Files Modified**
+1. **src/utils/touchDragUtils.ts:195-201**: Enhanced local callback error logging
+2. **src/utils/touchDragUtils.ts:214-220**: Enhanced global callback error logging  
+3. **src/App.tsx:454-459**: Added drop target validation logging
+4. **src/App.tsx:462-470**: Enhanced data attribute validation logging
+5. **src/App.tsx:473-490**: Added task reference setting logging
+6. **src/App.tsx:524-530**: Enhanced handleDrop error logging
+
+### Expected Result
+Now the logs will show:
+1. **Detailed error information** instead of empty objects if callbacks fail
+2. **Precise execution flow tracking** to see exactly where the callback stops
+3. **Data attribute validation details** to confirm drop targets have proper data
+4. **Task type detection results** to verify reference setting works correctly
+
+### Next Steps for Testing
+1. Test on mobile device with debug logging enabled (🐛 button)
+2. Look for the new detailed logs in the debug panel:
+   - Enhanced error details with stack traces
+   - "Drop target validation passed" logs
+   - "Setting task references" logs  
+   - "About to call handleDrop from touch manager" logs
+3. If any step fails, the enhanced logging will pinpoint the exact failure
+
+### Testing Status  
+- ✅ Build successful (228.43 kB, gzip: 66.74 kB)
+- ✅ TypeScript compilation passed  
+- ✅ Enhanced debugging ready for mobile testing

@@ -192,7 +192,13 @@ class TouchDragManager {
         debugLogger.info('TOUCH_DRAG', 'Local callback completed');
       }
     } catch (error) {
-      debugLogger.error('TOUCH_DRAG', 'Local callback failed', { error });
+      debugLogger.error('TOUCH_DRAG', 'Local callback failed', { 
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        } : String(error)
+      });
     }
     
     // Call global callback second (for app-level handling like actual dropping)
@@ -205,7 +211,13 @@ class TouchDragManager {
         debugLogger.warn('TOUCH_DRAG', 'No global callback registered');
       }
     } catch (error) {
-      debugLogger.error('TOUCH_DRAG', 'Global callback failed', { error });
+      debugLogger.error('TOUCH_DRAG', 'Global callback failed', { 
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        } : String(error)
+      });
     }
   };
 

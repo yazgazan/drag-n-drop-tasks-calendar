@@ -451,24 +451,42 @@ function App() {
           return;
         }
         
+        debugLogger.info('APP_DRAG_END', 'Drop target validation passed', {
+          hasDataset: !!dropTarget.dataset,
+          datasetKeys: dropTarget.dataset ? Object.keys(dropTarget.dataset) : [],
+          date: dropTarget.dataset?.date,
+          time: dropTarget.dataset?.time
+        });
+        
         // Verify drop target has required data attributes
         if (!dropTarget.dataset.date || !dropTarget.dataset.time) {
           debugLogger.error('APP_DRAG_END', 'Drop target missing required data attributes', {
             date: dropTarget.dataset.date,
-            time: dropTarget.dataset.time
+            time: dropTarget.dataset.time,
+            hasDataset: !!dropTarget.dataset,
+            datasetEntries: dropTarget.dataset ? Object.entries(dropTarget.dataset) : []
           });
           return;
         }
         
         // Set the dragged task reference based on task type
+        debugLogger.info('APP_DRAG_END', 'Setting task references', {
+          taskHasTimeProperty: 'time' in task,
+          taskType: typeof task,
+          taskId: task?.id,
+          taskTitle: task?.title
+        });
+        
         if ('time' in task) {
           // It's a scheduled task
           draggedScheduledTaskRef.current = task as ScheduledTask;
           draggedTaskRef.current = null;
+          debugLogger.info('APP_DRAG_END', 'Set as scheduled task reference');
         } else {
           // It's an unscheduled task
           draggedTaskRef.current = task as Task;
           draggedScheduledTaskRef.current = null;
+          debugLogger.info('APP_DRAG_END', 'Set as unscheduled task reference');
         }
         
         // Create a proper synthetic React DragEvent for the drop handler
@@ -521,7 +539,13 @@ function App() {
           await handleDrop(syntheticEvent);
           debugLogger.info('APP_DRAG_END', 'handleDrop called successfully');
         } catch (error) {
-          debugLogger.error('APP_DRAG_END', 'handleDrop failed', { error });
+          debugLogger.error('APP_DRAG_END', 'handleDrop failed', { 
+            error: error instanceof Error ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+            } : String(error)
+          });
         }
       }
     });
