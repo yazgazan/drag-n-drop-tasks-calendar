@@ -508,10 +508,18 @@ function App() {
         } as unknown as React.DragEvent<HTMLDivElement>;
         
         // Call the drop handler directly instead of dispatching an event
-        debugLogger.info('APP_DRAG_END', 'Calling handleDrop from touch manager', {
-          targetClassName: dropTarget?.className
+        debugLogger.info('APP_DRAG_END', 'About to call handleDrop from touch manager', {
+          targetClassName: dropTarget?.className,
+          syntheticEventTarget: syntheticEvent.target,
+          syntheticEventTargetClass: (syntheticEvent.target as HTMLElement)?.className
         });
-        handleDrop(syntheticEvent);
+        
+        try {
+          handleDrop(syntheticEvent);
+          debugLogger.info('APP_DRAG_END', 'handleDrop called successfully');
+        } catch (error) {
+          debugLogger.error('APP_DRAG_END', 'handleDrop failed', { error });
+        }
       }
     });
     
