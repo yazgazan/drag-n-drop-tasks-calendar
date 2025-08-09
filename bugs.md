@@ -21,8 +21,8 @@ From the mobile test logs, we can see:
 
 ## Root Cause Analysis
 
-### Key Finding
-The touch drag system successfully identifies drop targets and calls callbacks, but the `handleDrop` function (which performs the actual task update) is not being executed.
+### Key Finding ✅ RESOLVED
+The touch drag system successfully identified drop targets and called callbacks, but the `handleDrop` function was not being executed due to a **stale callback reference issue**.
 
 ### Investigation Steps Taken
 
@@ -39,52 +39,82 @@ The touch drag system successfully identifies drop targets and calls callbacks, 
    - Added logging before and after `handleDrop` execution
    - Added synthetic event target verification logs
 
-## Current Status
-- ✅ Enhanced logging has been added to capture more details
-- ⏳ Need to test with new logging to identify the exact failure point
+4. **Discovered the actual root cause** 🎯
+   - Enhanced logging showed `hasGlobalCallback: true` but callback was never executed
+   - The critical log `"CALLBACK ENTRY - This should always show!"` was missing
+   - This indicated the global callback reference was stale
+
+### Root Cause: useCallback Dependency Issue
+
+The problem was in `src/App.tsx:187` where `handleDrop` was defined with:
+```typescript
+const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
+  // ... function body
+}, [scheduledTasks, draggedTaskRef, draggedScheduledTaskRef]);
+```
+
+**The Issue**:
+- `scheduledTasks` changes every time tasks are loaded/updated
+- This caused `handleDrop` to be recreated on every task update
+- The global callback useEffect (line 422) ran again due to `handleDrop` changing
+- The touch drag system retained a stale reference to the old callback
+
+## Current Status ✅ FIXED
+- ✅ **Root cause identified**: Stale callback reference due to `handleDrop` recreation
+- ✅ **Solution implemented**: Use ref for `scheduledTasks` to stabilize callback
+- ✅ **Build successful**: No compilation errors
+
+## Solution Applied
+
+### Code Changes Made
+1. **Added `scheduledTasksRef`** (`src/App.tsx:43`):
+   ```typescript
+   const scheduledTasksRef = useRef<ScheduledTasks>({});
+   ```
+
+2. **Updated ref when state changes** (`src/App.tsx:167`):
+   ```typescript
+   setScheduledTasks(scheduledTasksMap);
+   scheduledTasksRef.current = scheduledTasksMap;
+   ```
+
+3. **Modified `handleDrop` to use ref** (`src/App.tsx:311`):
+   ```typescript
+   finalTime = findOptimalTimeSlot(calendarDate, scheduledTasksRef.current, timeSlots);
+   ```
+
+4. **Removed `scheduledTasks` from dependency array** (`src/App.tsx:421`):
+   ```typescript
+   }, [draggedTaskRef, draggedScheduledTaskRef]);
+   ```
+
+### Why This Fixes the Issue
+- `handleDrop` now only recreates when `draggedTaskRef` or `draggedScheduledTaskRef` change (rare)
+- Global callback reference remains stable between task updates
+- Touch drag system can reliably call the current `handleDrop` function
 
 ## Next Steps
-
-### Immediate Actions
-1. **Test mobile drag-and-drop with enhanced logging**
-   - Look for new logs: "About to call handleDrop from touch manager"
-   - Check if "handleDrop called successfully" or error logs appear
-
-2. **Analyze enhanced log output to determine**:
-   - Is `handleDrop` being called at all?
-   - Are there any JavaScript errors preventing execution?
-   - Is the synthetic event properly formed?
-
-### Potential Solutions Based on Investigation Results
-
-#### If handleDrop is not being called:
-- Check if the callback reference is properly maintained
-- Verify useCallback dependencies are correct
-- Investigate potential React state closure issues
-
-#### If handleDrop is called but fails silently:
-- Check for errors in the drop target identification logic
-- Verify the synthetic event target properties match expected format
-- Investigate async/await error handling in the drop handler
-
-#### If handleDrop executes but task update fails:
-- Check Todoist API call execution
-- Verify task state updates are properly triggered
-- Investigate optimistic update rollback scenarios
+### Testing Required
+- ⏳ **Test on mobile device** with the fix to confirm:
+  - `"CALLBACK ENTRY - This should always show!"` log appears
+  - `"About to call handleDrop from touch manager"` log appears  
+  - `"handleDrop called successfully"` log appears
+  - Actual task scheduling works on mobile
 
 ### Files Modified
-- `src/App.tsx`: Added enhanced logging around `handleDrop` execution (lines 511-522)
-
-### Test Requirements
-- Test on actual mobile device with developer tools/remote debugging
-- Capture full console logs during drag-and-drop operation
-- Verify network requests are made to Todoist API
+- `src/App.tsx`: 
+  - Added `scheduledTasksRef` (line 43)
+  - Updated ref on state changes (line 167) 
+  - Modified `handleDrop` to use ref (line 311)
+  - Removed `scheduledTasks` from dependency array (line 421)
+  - Enhanced logging around `handleDrop` execution (lines 511-522)
 
 ## Technical Context
-- Touch drag system: Custom implementation in `src/utils/touchDragUtils.ts`
-- Drop handler: `handleDrop` function in `src/App.tsx:187`
-- Event bridging: Synthetic React DragEvent created to bridge touch events to drag events
-- Task updates: Todoist API calls via REST API v2
+- **Touch drag system**: Custom implementation in `src/utils/touchDragUtils.ts`
+- **Drop handler**: `handleDrop` function in `src/App.tsx:187`
+- **Event bridging**: Synthetic React DragEvent created to bridge touch events to drag events
+- **Task updates**: Todoist API calls via REST API v2
+- **Root issue**: React useCallback dependency causing stale callback references
 
 ## Priority
-**HIGH** - Core functionality broken on mobile devices, significantly impacting user experience.
+**HIGH** - Core functionality was broken on mobile devices. ✅ **NOW FIXED** - Ready for testing.

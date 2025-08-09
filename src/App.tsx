@@ -40,6 +40,7 @@ function App() {
   }, [isDebugModalOpen]);
   const draggedTaskRef = useRef<Task | null>(null);
   const draggedScheduledTaskRef = useRef<ScheduledTask | null>(null);
+  const scheduledTasksRef = useRef<ScheduledTasks>({});
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -163,6 +164,7 @@ function App() {
         
         setTasks(unscheduledTasks);
         setScheduledTasks(scheduledTasksMap);
+        scheduledTasksRef.current = scheduledTasksMap;
         setError(null);
       } catch (err) {
         debugLogger.error('INITIALIZATION', 'Failed to load tasks', { error: err instanceof Error ? err.message : String(err) });
@@ -306,7 +308,7 @@ function App() {
       // For month view, use smart time selection instead of the default time
       let finalTime = time;
       if (isMonthViewDay) {
-        finalTime = findOptimalTimeSlot(calendarDate, scheduledTasks, timeSlots);
+        finalTime = findOptimalTimeSlot(calendarDate, scheduledTasksRef.current, timeSlots);
         debugLogger.info('SMART_SCHEDULING', 'Month view smart time selection', { 
           originalTime: time, 
           selectedTime: finalTime 
@@ -416,7 +418,7 @@ function App() {
         alert(errorMessage);
       }
     }
-  }, [scheduledTasks, draggedTaskRef, draggedScheduledTaskRef]);
+  }, [draggedTaskRef, draggedScheduledTaskRef]);
 
   // Set up touch drag callbacks (must be before conditional returns)
   useEffect(() => {
