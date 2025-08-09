@@ -33,7 +33,7 @@ class TouchDragManager {
   private globalCallbacks: {
     onDragStart?: (task: Task | ScheduledTask, element: HTMLElement) => void;
     onDragMove?: (x: number, y: number, task: Task | ScheduledTask) => void;
-    onDragEnd?: (task: Task | ScheduledTask, dropTarget: HTMLElement | null) => void;
+    onDragEnd?: (task: Task | ScheduledTask, dropTarget: HTMLElement | null) => Promise<void> | void;
   } = {};
 
   setCallbacks(callbacks: typeof this.callbacks) {
@@ -132,7 +132,7 @@ class TouchDragManager {
     }
   };
 
-  private handleTouchEnd = (e: TouchEvent) => {
+  private handleTouchEnd = async (e: TouchEvent) => {
     const wasDragging = this.state.isDragging;
     
     // Remove global listeners first
@@ -199,7 +199,7 @@ class TouchDragManager {
     try {
       if (this.globalCallbacks.onDragEnd) {
         debugLogger.info('TOUCH_DRAG', 'Calling global callback');
-        this.globalCallbacks.onDragEnd(draggedTask!, dropTarget);
+        await this.globalCallbacks.onDragEnd(draggedTask!, dropTarget);
         debugLogger.info('TOUCH_DRAG', 'Global callback completed');
       } else {
         debugLogger.warn('TOUCH_DRAG', 'No global callback registered');

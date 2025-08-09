@@ -432,7 +432,7 @@ function App() {
       });
       
       touchDragManager.setGlobalCallbacks({
-      onDragEnd: (task, dropTarget) => {
+      onDragEnd: async (task, dropTarget) => {
         debugLogger.info('APP_DRAG_END', 'CALLBACK ENTRY - This should always show!', {});
         debugLogger.info('APP_DRAG_END', 'Touch drag ended - callback called', {
           task: task?.title,
@@ -518,7 +518,7 @@ function App() {
         });
         
         try {
-          handleDrop(syntheticEvent);
+          await handleDrop(syntheticEvent);
           debugLogger.info('APP_DRAG_END', 'handleDrop called successfully');
         } catch (error) {
           debugLogger.error('APP_DRAG_END', 'handleDrop failed', { error });
