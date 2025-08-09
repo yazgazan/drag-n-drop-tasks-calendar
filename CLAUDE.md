@@ -78,7 +78,6 @@ interface TodoistTask {
 - Responsive design for mobile devices
 
 ### Development Commands
-- `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run test` - Run test suite
 - `npm run lint` - Run ESLint

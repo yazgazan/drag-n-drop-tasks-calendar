@@ -422,15 +422,16 @@ function App() {
 
   // Set up touch drag callbacks (must be before conditional returns)
   useEffect(() => {
-    debugLogger.info('APP_SETUP', 'useEffect for touch drag callbacks STARTING', {
-      handleDropFunction: !!handleDrop,
-      timestamp: Date.now(),
-      isAuthenticated,
-      loading,
-      error: !!error
-    });
-    
-    touchDragManager.setGlobalCallbacks({
+    try {
+      debugLogger.info('APP_SETUP', 'useEffect for touch drag callbacks STARTING', {
+        handleDropFunction: !!handleDrop,
+        timestamp: Date.now(),
+        isAuthenticated,
+        loading,
+        error: !!error
+      });
+      
+      touchDragManager.setGlobalCallbacks({
       onDragEnd: (task, dropTarget) => {
         debugLogger.info('APP_DRAG_END', 'CALLBACK ENTRY - This should always show!', {});
         debugLogger.info('APP_DRAG_END', 'Touch drag ended - callback called', {
@@ -529,6 +530,9 @@ function App() {
       callbacksSet: true,
       timestamp: Date.now()
     });
+    } catch (error) {
+      debugLogger.error('APP_SETUP', 'Error in useEffect for touch drag callbacks', { error });
+    }
   }, [handleDrop]);
 
   const handleLogin = (token: string) => {

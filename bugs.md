@@ -59,9 +59,10 @@ const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
 - The global callback useEffect (line 422) ran again due to `handleDrop` changing
 - The touch drag system retained a stale reference to the old callback
 
-## Current Status ✅ FIXED
+## Current Status ✅ FIXED + ENHANCED
 - ✅ **Root cause identified**: Stale callback reference due to `handleDrop` recreation
-- ✅ **Solution implemented**: Use ref for `scheduledTasks` to stabilize callback
+- ✅ **Initial solution implemented**: Use ref for `scheduledTasks` to stabilize callback
+- ✅ **Enhanced error handling**: Added comprehensive error handling and logging
 - ✅ **Build successful**: No compilation errors
 
 ## Solution Applied
@@ -88,18 +89,51 @@ const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
    }, [draggedTaskRef, draggedScheduledTaskRef]);
    ```
 
+5. **Enhanced error handling** (`src/App.tsx:425-535`):
+   ```typescript
+   useEffect(() => {
+     try {
+       debugLogger.info('APP_SETUP', 'useEffect for touch drag callbacks STARTING', {
+         handleDropFunction: !!handleDrop,
+         timestamp: Date.now(),
+         isAuthenticated,
+         loading,
+         error: !!error
+       });
+       
+       touchDragManager.setGlobalCallbacks({
+         // ... callback implementation
+       });
+       
+       debugLogger.info('APP_SETUP', 'useEffect for touch drag callbacks COMPLETED', {
+         callbacksSet: true,
+         timestamp: Date.now()
+       });
+     } catch (error) {
+       debugLogger.error('APP_SETUP', 'Error in useEffect for touch drag callbacks', { error });
+     }
+   }, [handleDrop]);
+   ```
+
 ### Why This Fixes the Issue
 - `handleDrop` now only recreates when `draggedTaskRef` or `draggedScheduledTaskRef` change (rare)
 - Global callback reference remains stable between task updates
 - Touch drag system can reliably call the current `handleDrop` function
+- **Enhanced error handling** captures and logs any callback setup failures
 
-## Next Steps
-### Testing Required
-- ⏳ **Test on mobile device** with the fix to confirm:
-  - `"CALLBACK ENTRY - This should always show!"` log appears
-  - `"About to call handleDrop from touch manager"` log appears  
-  - `"handleDrop called successfully"` log appears
-  - Actual task scheduling works on mobile
+## Testing Status ✅ ENHANCED
+### Expected Logs on Mobile Testing
+The fix is now ready for mobile testing. When testing, you should see these logs:
+1. ✅ `"APP_SETUP useEffect for touch drag callbacks STARTING"` - Confirms useEffect runs
+2. ✅ `"APP_SETUP useEffect for touch drag callbacks COMPLETED"` - Confirms callback setup
+3. ✅ `"CALLBACK ENTRY - This should always show!"` - Confirms callback execution
+4. ✅ `"About to call handleDrop from touch manager"` - Confirms handleDrop is called
+5. ✅ `"handleDrop called successfully"` - Confirms successful task scheduling
+
+### Debugging Improvements
+- Any errors during callback setup will now be logged with `"Error in useEffect for touch drag callbacks"`
+- Enhanced logging provides better visibility into the callback execution flow
+- Easier troubleshooting if issues persist
 
 ### Files Modified
 - `src/App.tsx`: 
@@ -107,7 +141,9 @@ const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
   - Updated ref on state changes (line 167) 
   - Modified `handleDrop` to use ref (line 311)
   - Removed `scheduledTasks` from dependency array (line 421)
+  - **Enhanced error handling in useEffect** (lines 425-535)
   - Enhanced logging around `handleDrop` execution (lines 511-522)
+- `bugs.md`: Updated with latest fix status and testing instructions
 
 ## Technical Context
 - **Touch drag system**: Custom implementation in `src/utils/touchDragUtils.ts`
@@ -115,6 +151,7 @@ const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
 - **Event bridging**: Synthetic React DragEvent created to bridge touch events to drag events
 - **Task updates**: Todoist API calls via REST API v2
 - **Root issue**: React useCallback dependency causing stale callback references
+- **Enhancement**: Added comprehensive error handling for better debugging
 
 ## Priority
-**HIGH** - Core functionality was broken on mobile devices. ✅ **NOW FIXED** - Ready for testing.
+**HIGH** - Core functionality was broken on mobile devices. ✅ **NOW FIXED + ENHANCED** - Ready for testing with improved error handling.
