@@ -1983,6 +1983,10 @@ body {
 
 /* Mobile responsiveness for debug modal */
 @media (max-width: 768px) {
+  .debug-button {
+    display: none;
+  }
+  
   .debug-modal {
     width: 100vw;
     max-width: 100vw;
